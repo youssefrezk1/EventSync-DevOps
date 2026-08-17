@@ -155,3 +155,9 @@ backend/uploads/
 
 # Logs
 *.log
+# Temporary backup files
+*.backup
+*.backup2
+*.before-lint-fix
+*.backup-prefer-const
+*.before-final-lint-fix
