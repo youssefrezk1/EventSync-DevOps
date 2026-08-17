@@ -217,7 +217,15 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
-
+      - name: Create test environment file
+        run: |
+          cat <<EOF > .env
+          PORT=4000
+          MONGO_URI=mongodb://eventsync:eventsync_password@mongodb:27017/eventsync?authSource=admin
+          JWT_SECRET=test_secret
+          JWT_EXPIRES_IN=1d
+          FRONTEND_URL=http://localhost:3000
+          EOF
       - name: Validate compose file
         run: docker compose config
 
