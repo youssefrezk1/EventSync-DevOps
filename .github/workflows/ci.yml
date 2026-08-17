@@ -1,4 +1,7 @@
 name: EventSync CI
+concurrency:
+  group: eventsync-ci-${{ github.ref }}
+  cancel-in-progress: true
 
 on:
   push:
@@ -204,14 +207,54 @@ jobs:
           image-ref: eventsync-backend:test
           severity: HIGH,CRITICAL
           ignore-unfixed: true
+  # ============================================================
+  # DOCKER COMPOSE VALIDATION
+  # ============================================================
+  docker-compose-validation:
+    name: Docker Compose Validation
+    runs-on: ubuntu-latest
 
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Validate compose file
+        run: docker compose config
+
+  # ============================================================
+  # INTEGRATION TEST
+  # ============================================================
+  integration-test:
+    name: Integration Test
+    runs-on: ubuntu-latest
+
+    needs:
+      - docker-build
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Start application
+        run: docker compose up -d --build
+
+      - name: Wait for backend
+        run: |
+          sleep 30
+          curl --fail http://localhost:4000/api/health
+
+      - name: Show containers
+        run: docker ps
+
+      - name: Shutdown
+        if: always()
+        run: docker compose down
   # ============================================================
   # 4. CI RESULT
   # ============================================================
   ci-result:
     name: CI Result
     runs-on: ubuntu-latest
-
     needs:
       - security
       - trivy-filesystem
@@ -219,6 +262,9 @@ jobs:
       - backend
       - docker-build
       - trivy-image
+      - docker-compose-validation
+      - integration-test
+
     if: always()
 
     steps:
@@ -260,6 +306,18 @@ jobs:
 
           if [ "${{ needs.trivy-image.result }}" != "success" ]; then
             echo "Trivy image scan failed."
+            exit 1
+          fi
+
+          compose_result="${{ needs.docker-compose-validation.result }}"
+
+          if [ "$compose_result" != "success" ]; then
+            echo "Docker compose validation failed."
+            exit 1
+          fi
+
+          if [ "${{ needs.integration-test.result }}" != "success" ]; then
+            echo "Integration test failed."
             exit 1
           fi
 
