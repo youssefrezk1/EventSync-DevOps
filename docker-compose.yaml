@@ -12,6 +12,13 @@ services:
       backend:
         condition: service_healthy
 
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
 
   backend:
     build:
@@ -22,17 +29,25 @@ services:
       - "4000:4000"
 
     env_file:
-      - .env
+      - ${COMPOSE_ENV_FILE:-.env}
 
     environment:
       PORT: 4000
       MONGO_URI: mongodb://eventsync:eventsync_password@mongodb:27017/eventsync?authSource=admin
 
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:4000/api/health"]
-      interval: 30s
+      test:
+        [
+          "CMD",
+          "wget",
+          "--no-verbose",
+          "--tries=1",
+          "--spider",
+          "http://localhost:4000/api/health"
+        ]
+      interval: 10s
       timeout: 5s
-      retries: 3
+      retries: 6
       start_period: 20s
 
     depends_on:
@@ -48,7 +63,13 @@ services:
       MONGO_INITDB_ROOT_PASSWORD: eventsync_password
 
     healthcheck:
-      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      test:
+        [
+          "CMD",
+          "mongosh",
+          "--eval",
+          "db.adminCommand('ping')"
+        ]
       interval: 10s
       timeout: 5s
       retries: 5
