@@ -19,7 +19,7 @@ spec:
     spec:
       containers:
         - name: frontend
-          image: 350769147036.dkr.ecr.us-east-1.amazonaws.com/eventsync-frontend:b995f5b
+          image: 350769147036.dkr.ecr.us-east-1.amazonaws.com/eventsync-frontend:96aa05f
 
           ports:
             - containerPort: 3000
