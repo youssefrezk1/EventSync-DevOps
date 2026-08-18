@@ -61,7 +61,7 @@ export default function ArchivedEventsButton({
     try {
       const token = localStorage.getItem("token");
       const response = await axios.get(
-        "http://localhost:4000/api/events/archived",
+        "/api/events/archived",
         {
           headers: { Authorization: `Bearer ${token}` },
         }
@@ -100,7 +100,7 @@ export default function ArchivedEventsButton({
       const token = localStorage.getItem("token");
       const pluralType = eventTypePlural(eventType);
       await axios.post(
-        `http://localhost:4000/api/events/${pluralType}/${eventId}/unarchive`,
+        `/api/events/${pluralType}/${eventId}/unarchive`,
         {},
         {
           headers: {

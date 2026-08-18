@@ -89,8 +89,10 @@ export async function registerStudent(req, res, next) {
       verificationToken 
     });
     
-    await sendStudentVerificationEmail(user, verificationToken);
-    res.status(201).json({ message: 'Registration successful! Please check your email to verify your account.' });
+	user.isVerified = true;
+	await user.save();
+
+	res.status(201).json({ message: 'Registration successful!' });
   } catch (err) { 
     next(err); 
   }
@@ -294,10 +296,11 @@ export async function login(req, res, next) {
       return res.status(403).json({ message: "Your account is pending approval by an admin." });
     }
 
-    // Check if user is verified (for Student, Staff and Vendor roles)
+    /* Check if user is verified (for Student, Staff and Vendor roles)
     if ((role === "student" || role === "staff" || role === "vendor") && !existingUser.isVerified) {
       return res.status(403).json({ message: "Please verify your email or wait for admin verification before logging in." });
     }
+    */
 
     if(existingUser.status=="Blocked"){
       return  res.status(403).json({ message: "Your account has been blocked. Please contact support." });

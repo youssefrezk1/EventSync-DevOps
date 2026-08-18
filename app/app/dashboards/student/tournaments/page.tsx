@@ -438,12 +438,12 @@ export default function TournamentsPage() {
       setFilteredRegistered([]);
       
       // Fetch available tournaments
-      const { data: tournamentsData } = await axios.get("http://localhost:4000/api/student/tournaments", {
+      const { data: tournamentsData } = await axios.get("/api/student/tournaments", {
         headers: { Authorization: `Bearer ${token}` },
       });
       
       // Fetch registered tournaments
-      const { data: registeredData } = await axios.get("http://localhost:4000/api/student/tournaments/registered/me", {
+      const { data: registeredData } = await axios.get("/api/student/tournaments/registered/me", {
         headers: { Authorization: `Bearer ${token}` },
       });
       
@@ -461,7 +461,7 @@ export default function TournamentsPage() {
   const fetchWalletBalance = async () => {
     try {
       const token = localStorage.getItem("token");
-      const { data } = await axios.get("http://localhost:4000/api/payments/getmyWallet", {
+      const { data } = await axios.get("/api/payments/getmyWallet", {
         headers: { Authorization: `Bearer ${token}` },
       });
       setWalletBalance(data.walletBalance || 0);
@@ -483,7 +483,7 @@ export default function TournamentsPage() {
     // First fetch full tournament details
     const token = localStorage.getItem("token");
     try {
-      const { data } = await axios.get(`http://localhost:4000/api/student/tournaments/${tournament._id}`, {
+      const { data } = await axios.get(`/api/student/tournaments/${tournament._id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       
@@ -594,7 +594,7 @@ export default function TournamentsPage() {
       }
 
       const { data } = await axios.post(
-        `http://localhost:4000/api/student/tournaments/${selectedTournament._id}/register`,
+        `/api/student/tournaments/${selectedTournament._id}/register`,
         requestBody,
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -637,7 +637,7 @@ export default function TournamentsPage() {
       const token = localStorage.getItem("token");
       
       const { data } = await axios.post(
-        `http://localhost:4000/api/student/tournaments/${pendingTeamId}/pay`,
+        `/api/student/tournaments/${pendingTeamId}/pay`,
         { paymentMethod },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -701,7 +701,7 @@ export default function TournamentsPage() {
     try {
       const token = localStorage.getItem("token");
       
-      const { data } = await axios.delete(`http://localhost:4000/api/student/tournaments/${tournamentId}/cancel`, {
+      const { data } = await axios.delete(`/api/student/tournaments/${tournamentId}/cancel`, {
         headers: { Authorization: `Bearer ${token}` },
       });
   

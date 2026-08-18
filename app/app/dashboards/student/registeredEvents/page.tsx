@@ -74,7 +74,7 @@ export default function RegisteredEventsPage() {
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
   const [openDialog, setOpenDialog] = useState(false);
 
-  const apiUrl = "http://localhost:4000/api/my-registrations";
+  const apiUrl = "/api/my-registrations";
 
   useEffect(() => {
     const fetchRegistrations = async () => {

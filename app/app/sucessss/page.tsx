@@ -73,7 +73,7 @@ form.itinerary.forEach((item: any, i: number) => {
     // Debug: Log all FormData entries
     console.log("FormData contents:");
     console.log(`Total images being uploaded: ${imageCounter}`);
-    for (let [key, value] of formData.entries()) {
+    for (const [key, value] of formData.entries()) {
       console.log(key, value instanceof File ? `File: ${value.name}` : value);
     }
 

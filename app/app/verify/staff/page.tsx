@@ -15,7 +15,7 @@ export default function VerifyStaffPage() {
       }
 
       try {
-        const res = await fetch(`http://localhost:4000/auth/verify/staff?token=${token}`);
+        const res = await fetch(`/auth/verify/staff?token=${token}`);
         if (!res.ok) throw new Error('Verification failed');
         setStatus('success');
 

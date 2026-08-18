@@ -819,7 +819,7 @@ const handleConfirmAction = async () => {
       <Dialog open={deleteDialogOpen} onClose={handleCloseDeleteDialog} maxWidth="xs" fullWidth>
         <DialogTitle>Delete Workshop</DialogTitle>
         <DialogContent dividers>
-          <Typography>Are you sure you want to delete "{selectedWorkshop?.name}"?</Typography>
+          <Typography>Are you sure you want to delete &quot;{selectedWorkshop?.name}&quot;?</Typography>
           {deleteError && <Alert severity="error" sx={{ mt: 2 }}>{deleteError}</Alert>}
         </DialogContent>
         <DialogActions>

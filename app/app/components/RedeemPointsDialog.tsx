@@ -69,7 +69,7 @@ export default function RedeemPointsDialog({
       setError("");
       setErrorDetail("");
 
-      const { data } = await api.post("/api/payments/redeemPoints", {
+      await api.post("/api/payments/redeemPoints", {
         pointsToRedeem: selectedPoints,
       });
 
@@ -78,11 +78,36 @@ export default function RedeemPointsDialog({
         onRedeemSuccess();
         handleClose();
       }, 2000);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Redemption error:", err);
-      const errorMessage = err.response?.data?.message || "Failed to redeem points. Please try again.";
-      const errorDetailMsg = err.response?.data?.detail || "";
-      
+
+      let errorMessage = "Failed to redeem points. Please try again.";
+      let errorDetailMsg = "";
+
+      if (typeof err === "object" && err !== null && "response" in err) {
+        const response = err.response;
+
+        if (typeof response === "object" && response !== null && "data" in response) {
+          const data = response.data;
+
+          if (typeof data === "object" && data !== null) {
+            if (
+              "message" in data &&
+              typeof data.message === "string"
+            ) {
+              errorMessage = data.message;
+            }
+
+            if (
+              "detail" in data &&
+              typeof data.detail === "string"
+            ) {
+              errorDetailMsg = data.detail;
+            }
+          }
+        }
+      }
+
       setError(errorMessage);
       setErrorDetail(errorDetailMsg);
     } finally {
@@ -96,10 +121,6 @@ export default function RedeemPointsDialog({
     setErrorDetail("");
     setSuccess(false);
     onClose();
-  };
-
-  const getDollarValue = (points: number) => {
-    return (points / 500) * 10;
   };
 
   return (

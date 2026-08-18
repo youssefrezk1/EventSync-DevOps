@@ -220,8 +220,8 @@ function EventPageContent() {
 
     setApiEndpoint(
       type === "workshop"
-        ? `http://localhost:4000/api/workshops/${event._id}/register`
-        : `http://localhost:4000/api/trips/${event._id}/register`
+        ? `/api/workshops/${event._id}/register`
+        : `/api/trips/${event._id}/register`
     );
   };
 

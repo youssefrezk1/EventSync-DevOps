@@ -545,7 +545,7 @@ export default function ReportsPage() {
       if (filterType) params.type = filterType;
       if (filterDateFrom) params.from = filterDateFrom;
       if (filterDateTo) params.to = filterDateTo;
-      const res = await axios.get(`http://localhost:4000/admin/reports/${view}`, {
+      const res = await axios.get(`/admin/reports/${view}`, {
         headers: { Authorization: `Bearer ${token}` },
         params: params,
       });
@@ -700,7 +700,7 @@ const handleRevenueSort = (key: string) => {
     if (!token) return;
     setLoading(true);
     try {
-      const res = await axios.get(`http://localhost:4000/admin/reports/${view}`, {
+      const res = await axios.get(`/admin/reports/${view}`, {
         headers: { Authorization: `Bearer ${token}` },
         params: {},
       });
@@ -728,7 +728,7 @@ const handleRevenueSort = (key: string) => {
     
     // Make the API call
     const response = await axios.get(
-      `http://localhost:4000/exports/${normalizedType}/${eventId}`,
+      `/exports/${normalizedType}/${eventId}`,
       {
         headers: { Authorization: `Bearer ${token}` },
         responseType: 'blob', // Important: tells axios to expect a binary file

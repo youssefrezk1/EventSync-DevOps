@@ -1465,7 +1465,7 @@ export default function RequestStatusPage() {
               }}
             >
               Track your booth applications and view upcoming events where
-              you've been accepted.
+              you&apos;ve been accepted.
             </Typography>
           </Container>
         </Box>

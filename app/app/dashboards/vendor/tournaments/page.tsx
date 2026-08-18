@@ -2230,7 +2230,7 @@ const VendorTournamentsPage = () => {
                             YOUR MESSAGE
                           </Typography>
                           <Typography variant="body1" fontWeight={500} sx={{ fontStyle: "italic" }}>
-                            "{selectedApplication.message}"
+                            &quot;{selectedApplication.message}&quot;
                           </Typography>
                         </Box>
                       </Box>

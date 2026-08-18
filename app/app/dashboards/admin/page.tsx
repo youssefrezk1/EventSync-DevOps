@@ -40,7 +40,7 @@ export default function AdminDashboard() {
   const [recentStaffVerifications, setRecentStaffVerifications] = useState<any[]>([]);
   const [topRevenueEvents, setTopRevenueEvents] = useState<any[]>([]);
 
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || "";
   const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
 
   const fetchDashboardData = async () => {

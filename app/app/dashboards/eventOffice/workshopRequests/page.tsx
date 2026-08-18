@@ -197,7 +197,7 @@ export default function WorkshopRequestsPage() {
     try {
       setLoading(true);
       const res = await axios.get<{ ok: boolean; workshops: Workshop[] }>(
-        "http://localhost:4000/event-office/workshops",
+        "/event-office/workshops",
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
@@ -323,7 +323,7 @@ export default function WorkshopRequestsPage() {
     try {
       setLoading(true);
       const res = await axios.get<{ ok: boolean; workshops: Workshop[] }>(
-        "http://localhost:4000/event-office/workshops",
+        "/event-office/workshops",
         { headers: { Authorization: `Bearer ${token}` } }
       );
       setWorkshops(res.data.workshops);
@@ -378,7 +378,7 @@ export default function WorkshopRequestsPage() {
     setConfirmDialog({ open: false, type: null, workshop: null });
     
     try {
-      const url = `http://localhost:4000/event-office/workshops/${confirmDialog.workshop._id}/${confirmDialog.type}`;
+      const url = `/event-office/workshops/${confirmDialog.workshop._id}/${confirmDialog.type}`;
       await axios.patch(url, {}, { headers: { Authorization: `Bearer ${token}` } });
 
       setSnackbar({ open: true, message: `Workshop ${confirmDialog.type}ed successfully`, severity: "success" });
@@ -404,7 +404,7 @@ export default function WorkshopRequestsPage() {
     if (!editWorkshop || !editMessage.trim()) return;
 
     try {
-      const url = `http://localhost:4000/event-office/workshops/${editWorkshop._id}/request-edits`;
+      const url = `/event-office/workshops/${editWorkshop._id}/request-edits`;
       await axios.patch(url, { edits: editMessage }, { headers: { Authorization: `Bearer ${token}` } });
 
       setSnackbar({ open: true, message: "Edit request sent successfully", severity: "success" });

@@ -1130,7 +1130,7 @@ function EventPageContent() {
       <Dialog open={deleteDialogOpen} onClose={handleCloseDeleteDialog} maxWidth="xs" fullWidth>
         <DialogTitle>Delete Event</DialogTitle>
         <DialogContent dividers>
-          <Typography>Are you sure you want to delete "{selectedEvent?.name}"?</Typography>
+          <Typography>Are you sure you want to delete &quot;{selectedEvent?.name}&quot;?</Typography>
           {deleteError && <Alert severity="error" sx={{ mt: 2 }}>{deleteError}</Alert>}
         </DialogContent>
         <DialogActions>

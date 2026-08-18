@@ -251,7 +251,7 @@ export default function CreateBazaarForm({
         }
       };
 
-      const baseURL = 'http://localhost:4000/eventOffice/bazaars';
+      const baseURL = '/eventOffice/bazaars';
 
       if (isEditing && bazaar?._id) {
         console.log(`Updating bazaar with ID: ${bazaar._id}`);
@@ -300,7 +300,7 @@ export default function CreateBazaarForm({
         }
       } else if (error.request) {
         console.error('No response received:', error.request);
-        alert('Error: No response from server. Please check if the backend is running on http://localhost:4000');
+        alert('Error: No response from server. Please check if the backend is reachable');
       } else {
         alert(`Error: ${error.message}`);
       }

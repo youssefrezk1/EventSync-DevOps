@@ -167,7 +167,7 @@ export default function CourtMap() {
     setLoading(true);
     try {
       const response = await fetch(
-        `http://localhost:4000/court/availablebycourt/${selected!.id}?date=${selectedDate}`
+        `/court/availablebycourt/${selected!.id}?date=${selectedDate}`
       );
       const data = await response.json();
       const filteredSlots = filterFutureSlots(data.availableSlots || []);
@@ -186,7 +186,7 @@ export default function CourtMap() {
     setIsSubmitting(true);
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch("http://localhost:4000/court/reserveCourtByNumericId", {
+      const response = await fetch("/court/reserveCourtByNumericId", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

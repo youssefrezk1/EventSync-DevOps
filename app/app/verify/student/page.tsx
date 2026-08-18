@@ -15,7 +15,7 @@ export default function VerifyStudentPage() {
       }
 
       try {
-        const res = await fetch(`http://localhost:4000/auth/verify/student?token=${token}`);
+        const res = await fetch(`/auth/verify/student?token=${token}`);
         if (!res.ok) throw new Error('Verification failed');
         setStatus('success');
 

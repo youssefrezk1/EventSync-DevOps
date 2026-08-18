@@ -233,7 +233,7 @@ const handleDownloadPhoto = async () => {
     try {
       setLoading(true);
       const token = localStorage.getItem("token");
-      const res = await axios.get("http://localhost:4000/api/invitations/admin/all-requests", {
+      const res = await axios.get("/api/invitations/admin/all-requests", {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -450,7 +450,7 @@ const handleDownloadPhoto = async () => {
 
     try {
       const res = await axios.put(
-        `http://localhost:4000/api/invitations/admin/${requestId}/status`,
+        `/api/invitations/admin/${requestId}/status`,
         { status },
         { headers: { Authorization: `Bearer ${token}` } }
       );

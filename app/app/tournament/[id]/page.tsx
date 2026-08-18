@@ -126,7 +126,7 @@ interface Tournament {
 const api = {
   get: async (url: string) => {
     const token = localStorage.getItem("token");
-    const response = await fetch(`http://localhost:4000${url}`, {
+    const response = await fetch(`${url}`, {
       headers: {
         Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
@@ -136,7 +136,7 @@ const api = {
   },
   post: async (url: string, data?: any) => {
     const token = localStorage.getItem("token");
-    const response = await fetch(`http://localhost:4000${url}`, {
+    const response = await fetch(`${url}`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
@@ -148,7 +148,7 @@ const api = {
   },
   delete: async (url: string) => {
     const token = localStorage.getItem("token");
-    const response = await fetch(`http://localhost:4000${url}`, {
+    const response = await fetch(`${url}`, {
       method: "DELETE",
       headers: {
         Authorization: `Bearer ${token}`,
@@ -1362,7 +1362,7 @@ export default function TournamentDetailPage() {
                 >
                   <InfoIcon sx={{ color: "primary.main" }} />
                   <Typography sx={{ fontSize: 14, color: "primary.dark" }}>
-                    This is an individual tournament. Click "Proceed to Payment" to continue with your registration.
+                    This is an individual tournament. Click &quot;Proceed to Payment&quot; to continue with your registration.
                   </Typography>
                 </Paper>
               )}

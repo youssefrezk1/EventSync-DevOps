@@ -271,7 +271,7 @@ const [openMembers, setOpenMembers] = useState<Record<string, boolean>>({});
   const fetchTournaments = async () => {
     try {
       setLoading(true);
-      const res = await axios.get("http://localhost:4000/event-office/tournaments", {
+      const res = await axios.get("/event-office/tournaments", {
         headers: { Authorization: `Bearer ${token}` }
       });
       setTournaments(res.data.data || []);
@@ -439,7 +439,7 @@ const handleViewTeams = async (tournamentId: string, tournamentName: string) => 
   try {
     const token = localStorage.getItem('token'); // or wherever you store your auth token
 const res = await fetch(
-  `http://localhost:4000/event-office/tournaments/${tournamentId}/teams`,
+  `/event-office/tournaments/${tournamentId}/teams`,
   {
     headers: {
       'Content-Type': 'application/json',
@@ -465,7 +465,7 @@ const res = await fetch(
 
 const handleUpdateTeamStatus = async (teamId: string, newStatus: "Approved" | "Rejected" | "Disqualified") => {
   try {
-    const response = await fetch(`http://localhost:4000/event-office/tournaments/teams/${teamId}/status`, {
+    const response = await fetch(`/event-office/tournaments/teams/${teamId}/status`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
@@ -499,7 +499,7 @@ const handleUpdateTeamStatus = async (teamId: string, newStatus: "Approved" | "R
 
   const validateForm = () => {
     const errors: Record<string, string> = {};
-    
+
     if (!formData.name.trim()) errors.name = "Tournament name is required";
     if (!formData.sport) errors.sport = "Sport is required";
     if (!formData.status) errors.status = "Status is required";
@@ -509,28 +509,28 @@ const handleUpdateTeamStatus = async (teamId: string, newStatus: "Approved" | "R
     if (!formData.location.trim()) errors.location = "Location is required";
     // REMOVE THIS LINE - format is now optional:
     // if (!formData.format.trim()) errors.format = "Format is required";
-    
+
     const teamSize = parseInt(formData.teamSize);
     if (!teamSize || teamSize < 1) errors.teamSize = "Team size must be at least 1";
-    
+
     const maxTeams = parseInt(formData.maxTeams);
     if (!maxTeams || maxTeams < 1) errors.maxTeams = "Max teams must be at least 1";
-    
+
     const entryFee = parseFloat(formData.entryFee);
     if (isNaN(entryFee) || entryFee < 0) errors.entryFee = "Entry fee must be 0 or greater";
-    
+
     if (formData.startDate && formData.endDate) {
       if (new Date(formData.endDate) < new Date(formData.startDate)) {
         errors.endDate = "End date must be after start date";
       }
     }
-    
+
     if (formData.registrationDeadline && formData.startDate) {
       if (new Date(formData.registrationDeadline) > new Date(formData.startDate)) {
         errors.registrationDeadline = "Registration deadline must be before start date";
       }
     }
-    
+
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -560,7 +560,7 @@ const handleUpdateTeamStatus = async (teamId: string, newStatus: "Approved" | "R
 
       if (editingTournament) {
         const res = await axios.put(
-          `http://localhost:4000/event-office/tournaments/${editingTournament._id}`,
+          `/event-office/tournaments/${editingTournament._id}`,
           payload,
           { headers: { Authorization: `Bearer ${token}` } }
         );
@@ -571,8 +571,8 @@ const handleUpdateTeamStatus = async (teamId: string, newStatus: "Approved" | "R
         });
       } else {
         const res = await axios.post(
-          "http://localhost:4000/event-office/tournaments", 
-          payload, 
+          "/event-office/tournaments",
+          payload,
           { headers: { Authorization: `Bearer ${token}` } }
         );
         setSnackbar({
@@ -600,7 +600,7 @@ const handleUpdateTeamStatus = async (teamId: string, newStatus: "Approved" | "R
 
     try {
       const res = await axios.delete(
-        `http://localhost:4000/event-office/tournaments/${deletingTournament._id}`,
+        `/event-office/tournaments/${deletingTournament._id}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       setSnackbar({
@@ -630,7 +630,7 @@ const handleUpdateTeamStatus = async (teamId: string, newStatus: "Approved" | "R
   };
 
   const formatSport = (sport: string) => {
-    return sport.split(' ').map(word => 
+    return sport.split(' ').map(word =>
       word.charAt(0).toUpperCase() + word.slice(1)
     ).join(' ');
   };
@@ -1261,14 +1261,14 @@ const handleUpdateTeamStatus = async (teamId: string, newStatus: "Approved" | "R
           transformOrigin={{ horizontal: 'right', vertical: 'top' }}
           anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
         >
-          <MenuItem 
-            onClick={handleOpenModalFromMenu} 
+          <MenuItem
+            onClick={handleOpenModalFromMenu}
             sx={{ color: '#3b82f6', '&:hover': { bgcolor: 'rgba(59, 130, 246, 0.1)' } }}
           >
             <EditIcon fontSize="small" sx={{ mr: 1 }} />
             Edit Tournament
           </MenuItem>
-          
+
 <MenuItem
   onClick={() => {
     if (selectedTournament) {
@@ -1280,8 +1280,8 @@ const handleUpdateTeamStatus = async (teamId: string, newStatus: "Approved" | "R
   <PeopleIcon fontSize="small" sx={{ mr: 1 }} />
   View Teams
 </MenuItem>
-          <MenuItem 
-            onClick={handleOpenDeleteDialogFromMenu} 
+          <MenuItem
+            onClick={handleOpenDeleteDialogFromMenu}
             sx={{ color: '#dc2626', '&:hover': { bgcolor: '#fef2f2', color: '#b91c1c' } }}
           >
             <Trash2 size={18} style={{ marginRight: 8 }} />

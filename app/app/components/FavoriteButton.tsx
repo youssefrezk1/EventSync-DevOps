@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Box, Typography, CircularProgress } from "@mui/material";
 import FavoriteIcon from "@mui/icons-material/Favorite";
 import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
@@ -20,11 +20,7 @@ export default function FavoriteButton({ eventId, eventType }: FavoriteButtonPro
   // Get context functions
   const { incrementCount, decrementCount } = useFavoritesContext();
 
-  useEffect(() => {
-    checkIfFavorited();
-  }, [eventId]);
-
-  const checkIfFavorited = async () => {
+  const checkIfFavorited = useCallback(async () => {
     try {
       setLoading(true);
       const response = await checkFavorite(eventId);
@@ -34,7 +30,11 @@ export default function FavoriteButton({ eventId, eventType }: FavoriteButtonPro
     } finally {
       setLoading(false);
     }
-  };
+  }, [eventId]);
+
+  useEffect(() => {
+    checkIfFavorited();
+  }, [checkIfFavorited]);
 
   const handleToggleFavorite = async () => {
     try {
@@ -49,9 +49,24 @@ export default function FavoriteButton({ eventId, eventType }: FavoriteButtonPro
         setIsFavorited(true);
         incrementCount(); // ✅ Update global count
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Failed to toggle favorite:", error);
-      alert(error.response?.data?.message || "Failed to update favorites");
+
+      const message =
+        typeof error === "object" &&
+        error !== null &&
+        "response" in error &&
+        typeof error.response === "object" &&
+        error.response !== null &&
+        "data" in error.response &&
+        typeof error.response.data === "object" &&
+        error.response.data !== null &&
+        "message" in error.response.data &&
+        typeof error.response.data.message === "string"
+          ? error.response.data.message
+          : "Failed to update favorites";
+
+      alert(message);
     } finally {
       setActionLoading(false);
     }

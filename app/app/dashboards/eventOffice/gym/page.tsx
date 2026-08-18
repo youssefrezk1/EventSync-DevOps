@@ -174,7 +174,7 @@ export default function GymPage() {
   const fetchGymClasses = async () => {
     try {
       setLoading(true);
-      const res = await axios.get("http://localhost:4000/eventOffice/gym", {
+      const res = await axios.get("/eventOffice/gym", {
         headers: { Authorization: `Bearer ${token}` }
       });
       setGymClasses(res.data);
@@ -374,7 +374,7 @@ const handleMenuClick = (event: React.MouseEvent<HTMLElement>, g: GymClass) => {
 
       if (editingClass) {
         await axios.patch(
-          `http://localhost:4000/eventOffice/gym/${editingClass._id}`,
+          `/eventOffice/gym/${editingClass._id}`,
           {
             date: payload.date,
             time: payload.time,
@@ -388,7 +388,7 @@ const handleMenuClick = (event: React.MouseEvent<HTMLElement>, g: GymClass) => {
           severity: "success",
         });
       } else {
-        await axios.post("http://localhost:4000/eventOffice/gym", payload, {
+        await axios.post("/eventOffice/gym", payload, {
           headers: { Authorization: `Bearer ${token}` }
         });
         setSnackbar({
@@ -411,7 +411,7 @@ const handleMenuClick = (event: React.MouseEvent<HTMLElement>, g: GymClass) => {
 
     try {
       await axios.delete(
-        `http://localhost:4000/eventOffice/gym/${deletingClass._id}`,
+        `/eventOffice/gym/${deletingClass._id}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       await fetchGymClasses();

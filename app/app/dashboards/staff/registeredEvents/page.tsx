@@ -68,7 +68,7 @@ export default function RegisteredEventsPage() {
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [openDialog, setOpenDialog] = useState(false);
 
-  const apiUrl = "http://localhost:4000/api/my-registrations2";
+  const apiUrl = "/api/my-registrations2";
 
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString("en-US", {

@@ -758,7 +758,7 @@ export default function ConferenceView() {
       <Dialog open={deleteDialogOpen} onClose={handleCloseDeleteDialog} maxWidth="xs" fullWidth>
         <DialogTitle>Delete Conference</DialogTitle>
         <DialogContent dividers>
-          <Typography>Are you sure you want to delete "{selectedConference?.name}"?</Typography>
+          <Typography>Are you sure you want to delete &quot;{selectedConference?.name}&quot;?</Typography>
           {deleteError && <Alert severity="error" sx={{ mt: 2 }}>{deleteError}</Alert>}
         </DialogContent>
         <DialogActions>

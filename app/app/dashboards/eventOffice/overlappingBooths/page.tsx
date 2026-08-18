@@ -118,25 +118,25 @@ const OverlappingBoothsPage: React.FC = () => {
   const fetchData = async (): Promise<void> => {
     try {
       setLoading(true);
-      
+
       // ✅ FIXED: Use full URL like in reports page
       const [boothsRes, pollsRes] = await Promise.all([
-        axios.get("http://localhost:4000/api/admin/participation-requests", {
+        axios.get("/api/admin/participation-requests", {
           headers: { Authorization: `Bearer ${token}` }
         }),
-        axios.get("http://localhost:4000/api/booths/polls", {
+        axios.get("/api/booths/polls", {
           headers: { Authorization: `Bearer ${token}` }
         })
       ]);
-      
+
       console.log("Booths response:", boothsRes.data);
       console.log("Polls response:", pollsRes.data);
-      
+
       if (boothsRes.data.success) {
         const booths = boothsRes.data.data.filter(
           (item: any): item is Booth => 'StartDate' in item && 'EndDate' in item
         );
-        
+
         const polls = pollsRes.data.success ? pollsRes.data.data : [];
         const overlaps = findOverlappingBooths(booths, polls);
         setOverlappingGroups(overlaps);
@@ -151,10 +151,10 @@ const OverlappingBoothsPage: React.FC = () => {
 
   const findPollForBooths = (boothIds: string[], polls: Poll[]): Poll | undefined => {
     const sortedBoothIds = [...boothIds].sort();
-    
+
     for (const poll of polls) {
       const pollBoothIds = poll.Events.map(event => event.booth._id).sort();
-      
+
       if (
         pollBoothIds.length === sortedBoothIds.length &&
         pollBoothIds.every((id, index) => id === sortedBoothIds[index])
@@ -162,7 +162,7 @@ const OverlappingBoothsPage: React.FC = () => {
         return poll;
       }
     }
-    
+
     return undefined;
   };
 
@@ -190,15 +190,15 @@ const OverlappingBoothsPage: React.FC = () => {
 
       if (overlapping.length > 1) {
         overlapping.forEach(b => processed.add(b._id));
-        
+
         const starts = overlapping.map(b => new Date(b.StartDate));
         const ends = overlapping.map(b => new Date(b.EndDate));
         const overlapStart = new Date(Math.max(...starts.map(d => d.getTime())));
         const overlapEnd = new Date(Math.min(...ends.map(d => d.getTime())));
-        
+
         const boothIds = overlapping.map(b => b._id);
         const existingPoll = findPollForBooths(boothIds, polls);
-        
+
         groups.push({
           id: `group-${groups.length}`,
           overlapStart,
@@ -216,7 +216,7 @@ const OverlappingBoothsPage: React.FC = () => {
     const startDate = new Date(start);
     const endDate = new Date(end);
     const options: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric', year: 'numeric' };
-    
+
     return `${startDate.toLocaleDateString('en-US', options)} - ${endDate.toLocaleDateString('en-US', options)}`;
   };
 
@@ -238,11 +238,11 @@ const OverlappingBoothsPage: React.FC = () => {
     try {
       const boothIds = group.booths.map(booth => booth._id);
       // ✅ FIXED: Use full URL like in reports page
-      const response = await axios.post('http://localhost:4000/api/booths/poll', 
+      const response = await axios.post('/api/booths/poll',
         { boothIds },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      
+
       if (response.data.success) {
         await fetchData();
       }
@@ -306,7 +306,7 @@ const OverlappingBoothsPage: React.FC = () => {
               left: 0,
               right: 0,
               bottom: 0,
-              background: "linear-gradient(135deg, rgba(147, 199, 193, 0.1) 0%, rgba(0, 61, 82, 0.2) 100%)" 
+              background: "linear-gradient(135deg, rgba(147, 199, 193, 0.1) 0%, rgba(0, 61, 82, 0.2) 100%)"
             },
           }}
         >

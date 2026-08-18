@@ -422,7 +422,7 @@ export default function AddCommentAndRating({
                       mb: 3,
                     }}
                   >
-                    You've already submitted your feedback for this event
+                    You&apos;ve already submitted your feedback for this event
                   </Typography>
                   <Button
                     variant="outlined"

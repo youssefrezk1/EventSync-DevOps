@@ -82,7 +82,7 @@ export default function InvitationDialog({ open, onClose }: InvitationDialogProp
       
       // Single API call with both data and file
       await axios.post(
-        'http://localhost:4000/api/invitations/create',
+        '/api/invitations/create',
         formData,
         {
           headers: {
@@ -176,7 +176,7 @@ export default function InvitationDialog({ open, onClose }: InvitationDialogProp
             Upload Guest ID Photo *
           </Typography>
           <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1 }}>
-            Please upload a clear photo of the guest's ID (max 5MB, JPEG/PNG only)
+            Please upload a clear photo of the guest&apos;s ID (max 5MB, JPEG/PNG only)
           </Typography>
           
           <Button 

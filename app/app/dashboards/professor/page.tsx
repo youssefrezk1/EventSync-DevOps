@@ -362,7 +362,7 @@ export default function ProfessorHomePage() {
                 px: 3,
               }}
             >
-              Teaching Tomorrow's Leaders Today.
+              Teaching Tomorrow&apos;s Leaders Today.
             </Typography>
             <Typography
               component="span"
@@ -374,7 +374,7 @@ export default function ProfessorHomePage() {
                 px: 4,
               }}
             >
-              Teaching Tomorrow's Leaders Today.
+              Teaching Tomorrow&apos;s Leaders Today.
             </Typography>
           </Box>
         </Box>

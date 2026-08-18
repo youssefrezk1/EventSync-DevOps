@@ -324,7 +324,7 @@ export default function BazaarsPage() {
       setLoading(true);
       try {
         const res = await axios.get(
-          "http://localhost:4000/api/vendorOne/upcoming-bazaars",
+          "/api/vendorOne/upcoming-bazaars",
           {
             headers: { Authorization: `Bearer ${token}` },
           }

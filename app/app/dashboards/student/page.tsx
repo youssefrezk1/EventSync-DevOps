@@ -178,7 +178,7 @@ export default function HomePage() {
       // Get auth token from localStorage or your auth context
       const token = localStorage.getItem("token"); // ⚠️ ADJUST THIS based on your auth implementation
       
-      const response = await fetch("http://localhost:4000/api/notification-preferences", {
+      const response = await fetch("/api/notification-preferences", {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
@@ -212,7 +212,7 @@ export default function HomePage() {
       
       const token = localStorage.getItem("token"); // ⚠️ ADJUST THIS
       
-      const response = await fetch("http://localhost:4000/api/notification-preferences", {
+      const response = await fetch("/api/notification-preferences", {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -859,7 +859,7 @@ export default function HomePage() {
                 px: 3,
               }}
             >
-              Building Tomorrow's Leaders Through Today's Activities.
+              Building Tomorrow&apos;s Leaders Through Today&apos;s Activities.
             </Typography>
             <Typography
               component="span"
@@ -871,7 +871,7 @@ export default function HomePage() {
                 px: 4,
               }}
             >
-              Building Tomorrow's Leaders Through Today's Activities.
+              Building Tomorrow&apos;s Leaders Through Today&apos;s Activities.
             </Typography>
           </Box>
         </Box>
@@ -1029,7 +1029,7 @@ export default function HomePage() {
           }}
         >
           Bring someone special to campus<br />
-          Let's show them around!
+          Let&apos;s show them around!
         </Typography>
 
         <Box

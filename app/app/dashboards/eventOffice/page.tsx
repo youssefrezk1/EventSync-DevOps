@@ -103,10 +103,10 @@ export default function HomePage() {
       const headers = { Authorization: `Bearer ${token}` };
 
       const [revenueRes, gymRes, wsRes, vendorRes] = await Promise.all([
-        axios.get("http://localhost:4000/admin/reports/revenue", { headers }),
-        axios.get("http://localhost:4000/eventOffice/gym", { headers }),
-        axios.get("http://localhost:4000/event-office/workshops", { headers }),
-        axios.get("http://localhost:4000/api/admin/participation-requests", { headers }),
+        axios.get("/admin/reports/revenue", { headers }),
+        axios.get("/eventOffice/gym", { headers }),
+        axios.get("/event-office/workshops", { headers }),
+        axios.get("/api/admin/participation-requests", { headers }),
       ]);
 
       const workshops: Workshop[] = wsRes.data?.workshops || [];

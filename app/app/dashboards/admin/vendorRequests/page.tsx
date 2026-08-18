@@ -105,7 +105,7 @@ const [allRequests, setAllRequests] = useState<VendorRequest[]>([]); // Store or
   const fetchRequests = async () => {
     try {
       setLoading(true);
-      const res = await axios.get("http://localhost:4000/api/admin/participation-requests", {
+      const res = await axios.get("/api/admin/participation-requests", {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.data.success) {
@@ -297,14 +297,14 @@ if (sortConfig.key && sortConfig.direction) {
 
     // Debug log
     console.log("PUT request info:", {
-      url: `http://localhost:4000/api/admin/${type}-request/${requestId}/status`,
+      url: `/api/admin/${type}-request/${requestId}/status`,
       body: { status },
       token,
     });
 
     try {
       const res = await axios.put(
-        `http://localhost:4000/api/admin/${type}-request/${requestId}/status`,
+        `/api/admin/${type}-request/${requestId}/status`,
         { status },
         { headers: { Authorization: `Bearer ${token}` } }
       );

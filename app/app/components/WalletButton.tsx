@@ -29,7 +29,7 @@ export default function WalletButton() {
       const { data } = await api.get("/api/payments/getmywallet");
       setWalletBalance(data.walletBalance || 0);
       setPoints(data.points || 0);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Failed to fetch wallet balance:", err);
       setError("Failed to load wallet");
       setWalletBalance(0);

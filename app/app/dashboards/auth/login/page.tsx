@@ -212,7 +212,7 @@ const LoginPage: React.FC = () => {
             </button>
 
             <div className="text-center">
-              <span className="text-gray-500">Don't have an account? </span>
+              <span className="text-gray-500">Don&apos;t have an account? </span>
               <button
                 onClick={() => router.push("/dashboards/auth/signup")}
                 className="text-gray-900 font-semibold underline hover:text-indigo-600 transition-colors"

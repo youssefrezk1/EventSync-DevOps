@@ -424,7 +424,7 @@ export default function TripDetailPage() {
                         letterSpacing: "-0.5px",
                       }}
                     >
-                      Day's Attractions
+                      Day&apos;s Attractions
                     </Typography>
 
                     {currentDayItems.filter((item) => item.type === "attraction").length > 0 ? (

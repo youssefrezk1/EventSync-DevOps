@@ -220,7 +220,7 @@ export default function VendorPaymentSuccess() {
         </Typography>
         
         <Typography variant="body2" color="text.secondary" sx={{ mb: 4 }}>
-          Thank you for your sponsorship! We'll review your application and notify you soon.
+          Thank you for your sponsorship! We&apos;ll review your application and notify you soon.
         </Typography>
         
         <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', flexWrap: 'wrap' }}>

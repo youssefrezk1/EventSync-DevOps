@@ -507,7 +507,7 @@ function HomeContent() {
                   textAlign: "center",
                 }}
               >
-                Whether you're organizing academic workshops, planning exciting campus trips, hosting professional conferences, setting up vibrant bazaars, managing exhibition booths, or reserving sports fields and gym classes—EventSync streamlines every aspect of campus event management. From creation and reservation to attendance tracking and feedback, we empower every member of the university community to discover, participate in, and create meaningful experiences that enrich campus life.
+                Whether you&apos;re organizing academic workshops, planning exciting campus trips, hosting professional conferences, setting up vibrant bazaars, managing exhibition booths, or reserving sports fields and gym classes—EventSync streamlines every aspect of campus event management. From creation and reservation to attendance tracking and feedback, we empower every member of the university community to discover, participate in, and create meaningful experiences that enrich campus life.
               </Typography>
             </Grid>
           </Grid>

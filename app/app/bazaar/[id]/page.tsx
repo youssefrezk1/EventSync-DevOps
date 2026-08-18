@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { jwtDecode } from "jwt-decode";
+import axios from "axios";
 
 import {
   Box,
@@ -56,7 +57,7 @@ export default function BazaarDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  const [menuItems, setMenuItems] = useState<any[]>([]);
+  const [menuItems, setMenuItems] = useState<ReturnType<typeof getMenuItemsByRole>>([]);
 
   // Load menu from JWT
   useEffect(() => {
@@ -73,25 +74,30 @@ export default function BazaarDetailPage() {
   }, []);
 
   // Fetch Bazaar Details
-  const fetchBazaar = async () => {
+  const fetchBazaar = useCallback(async () => {
     try {
       setLoading(true);
 
       const { data } = await api.get(`/bazaarbyid/${bazaarId}`);
-      console.log(data);
 
       setBazaar(data.bazaar);
       setVendors(data.registeredVendors || []);
-    } catch (err: any) {
-      setError(err.response?.data?.message || "Failed to load bazaar");
+    } catch (err: unknown) {
+      if (axios.isAxiosError(err)) {
+        setError(
+          err.response?.data?.message || "Failed to load bazaar"
+        );
+      } else {
+        setError("Failed to load bazaar");
+      }
     } finally {
       setLoading(false);
     }
-  };
+  }, [bazaarId]);
 
   useEffect(() => {
     fetchBazaar();
-  }, [bazaarId]);
+  }, [fetchBazaar]);
 
   // Helpers
   const formatTime = (date: string) => {
@@ -158,8 +164,6 @@ export default function BazaarDetailPage() {
       </BasicLayout>
     );
   }
-
-  const dateTimeText = getDateTimeDisplay(bazaar.start, bazaar.endDate);
 
   return (
     <BasicLayout menuItems={menuItems}>
