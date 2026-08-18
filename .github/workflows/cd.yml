@@ -70,11 +70,6 @@ jobs:
         with:
           ref: ${{ steps.meta.outputs.sha }}
 
-      - name: Debug GitHub OIDC claims
-        uses: github/actions-oidc-debugger@main
-        with:
-          audience: sts.amazonaws.com
-
       - name: Configure AWS credentials with OIDC
         uses: aws-actions/configure-aws-credentials@v5
         with:

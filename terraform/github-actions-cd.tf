@@ -31,7 +31,7 @@ resource "aws_iam_role" "github_actions_cd" {
           StringEquals = {
             "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com"
 
-            "token.actions.githubusercontent.com:sub" = "repo:youssefrezk1/EventSync-DevOps:ref:refs/heads/main"
+            "token.actions.githubusercontent.com:sub" = "repo:youssefrezk1@195547752/EventSync-DevOps@1336141420:ref:refs/heads/main"
           }
         }
       }
