@@ -19,7 +19,7 @@ spec:
     spec:
       containers:
         - name: backend
-          image: 350769147036.dkr.ecr.us-east-1.amazonaws.com/eventsync-backend:b995f5b
+          image: 350769147036.dkr.ecr.us-east-1.amazonaws.com/eventsync-backend:db431d3
 
           ports:
             - containerPort: 4000
