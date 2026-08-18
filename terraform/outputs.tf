@@ -68,3 +68,8 @@ output "load_balancer_controller_role_arn" {
   description = "IAM role ARN used by the AWS Load Balancer Controller"
   value       = aws_iam_role.load_balancer_controller.arn
 }
+
+output "github_actions_cd_role_arn" {
+  description = "IAM role ARN assumed by GitHub Actions for EventSync CD"
+  value       = aws_iam_role.github_actions_cd.arn
+}

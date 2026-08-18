@@ -363,8 +363,11 @@ jobs:
   # ============================================================
   # 9. EMAIL NOTIFICATION
   # ============================================================
+  # ============================================================
+  # 9. EMAIL NOTIFICATION
+  # ============================================================
   email:
-    name: Email Notification
+    name: CI Notification
     runs-on: ubuntu-latest
 
     needs:
@@ -380,6 +383,20 @@ jobs:
     if: always()
 
     steps:
+      - name: Prepare CI report
+        id: report
+        shell: bash
+        run: |
+          if [ "${{ needs.ci-result.result }}" = "success" ]; then
+            echo "status=SUCCESS" >> "$GITHUB_OUTPUT"
+            echo "icon=✅" >> "$GITHUB_OUTPUT"
+            echo "message=All required CI checks completed successfully." >> "$GITHUB_OUTPUT"
+          else
+            echo "status=FAILED" >> "$GITHUB_OUTPUT"
+            echo "icon=❌" >> "$GITHUB_OUTPUT"
+            echo "message=One or more required CI checks failed." >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Send CI result email
         uses: dawidd6/action-send-mail@v6
         with:
@@ -390,61 +407,167 @@ jobs:
           username: ${{ secrets.MAIL_USERNAME }}
           password: ${{ secrets.MAIL_PASSWORD }}
 
-          from: EventSync CI <${{ secrets.MAIL_USERNAME }}>
+          from: 'EventSync DevOps <${{ secrets.MAIL_USERNAME }}>'
           to: ${{ secrets.MAIL_TO }}
 
           subject: >-
-            EventSync CI -
-            ${{ needs.ci-result.result == 'success' && 'SUCCESS' || 'FAILED' }}
-
-          body: |
-            EventSync CI Pipeline Report
-            =============================
-
-            Repository:
-            ${{ github.repository }}
-
-            Branch:
+            ${{ steps.report.outputs.icon }}
+            EventSync CI |
+            ${{ steps.report.outputs.status }} |
             ${{ github.ref_name }}
 
-            Commit:
-            ${{ github.sha }}
+          html_body: |
+            <!DOCTYPE html>
+            <html>
+            <body style="margin:0;padding:0;background:#f4f6f8;font-family:Arial,Helvetica,sans-serif;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f6f8;padding:32px 12px;">
+                <tr>
+                  <td align="center">
 
-            Triggered by:
-            ${{ github.actor }}
+                    <table width="640" cellpadding="0" cellspacing="0"
+                           style="max-width:640px;background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e5e7eb;">
 
-            -----------------------------
-            Pipeline Results
-            -----------------------------
+                      <tr>
+                        <td style="background:#111827;padding:28px 32px;">
+                          <div style="font-size:14px;color:#9ca3af;letter-spacing:1.5px;">
+                            EVENTSYNC DEVOPS
+                          </div>
 
-            Security:
-            ${{ needs.security.result }}
+                          <div style="font-size:28px;font-weight:700;color:#ffffff;margin-top:8px;">
+                            Continuous Integration Report
+                          </div>
+                        </td>
+                      </tr>
 
-            Trivy Filesystem:
-            ${{ needs.trivy-filesystem.result }}
+                      <tr>
+                        <td style="padding:32px;">
 
-            Frontend:
-            ${{ needs.frontend.result }}
+                          <div style="font-size:20px;font-weight:700;color:#111827;">
+                            ${{ steps.report.outputs.icon }}
+                            CI ${{ steps.report.outputs.status }}
+                          </div>
 
-            Backend:
-            ${{ needs.backend.result }}
+                          <div style="margin-top:8px;margin-bottom:28px;font-size:15px;color:#4b5563;">
+                            ${{ steps.report.outputs.message }}
+                          </div>
 
-            Docker Security:
-            ${{ needs.docker-security.result }}
+                          <table width="100%" cellpadding="8" cellspacing="0"
+                                 style="font-size:14px;border-collapse:collapse;">
 
-            Compose Validation:
-            ${{ needs.docker-compose-validation.result }}
+                            <tr>
+                              <td style="color:#6b7280;border-bottom:1px solid #e5e7eb;">
+                                Secret Security
+                              </td>
+                              <td style="font-weight:600;border-bottom:1px solid #e5e7eb;">
+                                ${{ needs.security.result }}
+                              </td>
+                            </tr>
 
-            Integration Test:
-            ${{ needs.integration-test.result }}
+                            <tr>
+                              <td style="color:#6b7280;border-bottom:1px solid #e5e7eb;">
+                                Trivy Filesystem
+                              </td>
+                              <td style="font-weight:600;border-bottom:1px solid #e5e7eb;">
+                                ${{ needs.trivy-filesystem.result }}
+                              </td>
+                            </tr>
 
-            Overall CI:
-            ${{ needs.ci-result.result }}
+                            <tr>
+                              <td style="color:#6b7280;border-bottom:1px solid #e5e7eb;">
+                                Frontend
+                              </td>
+                              <td style="font-weight:600;border-bottom:1px solid #e5e7eb;">
+                                ${{ needs.frontend.result }}
+                              </td>
+                            </tr>
 
-            -----------------------------
-            Workflow
-            -----------------------------
+                            <tr>
+                              <td style="color:#6b7280;border-bottom:1px solid #e5e7eb;">
+                                Backend
+                              </td>
+                              <td style="font-weight:600;border-bottom:1px solid #e5e7eb;">
+                                ${{ needs.backend.result }}
+                              </td>
+                            </tr>
 
-            ${{ github.server_url }}/${{ github.repository }}
-            /actions/runs/${{ github.run_id }}
-            EventSync CI has completed.
+                            <tr>
+                              <td style="color:#6b7280;border-bottom:1px solid #e5e7eb;">
+                                Docker Security
+                              </td>
+                              <td style="font-weight:600;border-bottom:1px solid #e5e7eb;">
+                                ${{ needs.docker-security.result }}
+                              </td>
+                            </tr>
+
+                            <tr>
+                              <td style="color:#6b7280;border-bottom:1px solid #e5e7eb;">
+                                Compose Validation
+                              </td>
+                              <td style="font-weight:600;border-bottom:1px solid #e5e7eb;">
+                                ${{ needs.docker-compose-validation.result }}
+                              </td>
+                            </tr>
+
+                            <tr>
+                              <td style="color:#6b7280;border-bottom:1px solid #e5e7eb;">
+                                Integration Test
+                              </td>
+                              <td style="font-weight:600;border-bottom:1px solid #e5e7eb;">
+                                ${{ needs.integration-test.result }}
+                              </td>
+                            </tr>
+
+                            <tr>
+                              <td style="color:#6b7280;">
+                                Overall CI
+                              </td>
+                              <td style="font-weight:700;">
+                                ${{ needs.ci-result.result }}
+                              </td>
+                            </tr>
+
+                          </table>
+
+                          <table width="100%" cellpadding="8" cellspacing="0"
+                                 style="font-size:13px;margin-top:24px;background:#f9fafb;border-radius:8px;">
+                            <tr>
+                              <td style="color:#6b7280;">Repository</td>
+                              <td>${{ github.repository }}</td>
+                            </tr>
+                            <tr>
+                              <td style="color:#6b7280;">Branch</td>
+                              <td>${{ github.ref_name }}</td>
+                            </tr>
+                            <tr>
+                              <td style="color:#6b7280;">Commit</td>
+                              <td style="font-family:monospace;">${{ github.sha }}</td>
+                            </tr>
+                            <tr>
+                              <td style="color:#6b7280;">Triggered by</td>
+                              <td>${{ github.actor }}</td>
+                            </tr>
+                          </table>
+
+                          <div style="margin-top:30px;text-align:center;">
+                            <a href="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                               style="display:inline-block;background:#111827;color:#ffffff;text-decoration:none;padding:12px 22px;border-radius:7px;font-size:14px;font-weight:600;">
+                              View CI Run
+                            </a>
+                          </div>
+
+                        </td>
+                      </tr>
+
+                      <tr>
+                        <td style="padding:20px;background:#f9fafb;text-align:center;color:#6b7280;font-size:12px;">
+                          EventSync Continuous Integration • GitHub Actions
+                        </td>
+                      </tr>
+
+                    </table>
+
+                  </td>
+                </tr>
+              </table>
+            </body>
+            </html>
