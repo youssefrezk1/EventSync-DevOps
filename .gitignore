@@ -174,3 +174,7 @@ override.tf
 override.tf.json
 *_override.tf
 *_override.tf.json
+
+# Kubernetes local secret manifests
+k8s/*secret*.yaml
+k8s/*secrets*.yaml
