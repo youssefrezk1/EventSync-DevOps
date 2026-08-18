@@ -7,4 +7,4 @@ data:
   PORT: "4000"
   JWT_EXPIRES_IN: "7d"
   WORKSHOP_FIXED_PRICE: "100"
-  FRONTEND_URL: "http://temporary.eventsync.local"
+  FRONTEND_URL: "http://k8s-eventsyn-eventsyn-4541cb13ee-286995754.us-east-1.elb.amazonaws.com"
