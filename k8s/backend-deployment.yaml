@@ -17,6 +17,9 @@ spec:
         app: backend
 
     spec:
+      serviceAccountName: eventsync-backend
+      automountServiceAccountToken: false
+
       securityContext:
         seccompProfile:
           type: RuntimeDefault

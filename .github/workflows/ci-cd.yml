@@ -652,10 +652,38 @@ jobs:
             --name "$EKS_CLUSTER"
 
       - name: Verify Kubernetes access
+        shell: bash
         run: |
-          kubectl auth can-i \
-            update deployments \
-            --namespace "$K8S_NAMESPACE"
+          set -e
+
+          check_access() {
+            verb="$1"
+            resource="$2"
+
+            if [ "$(kubectl auth can-i "$verb" "$resource" \
+              --namespace "$K8S_NAMESPACE")" != "yes" ]; then
+              echo "Missing Kubernetes permission: $verb $resource"
+              exit 1
+            fi
+          }
+
+          check_access get deployments
+          check_access update deployments
+          check_access patch deployments
+
+          check_access get serviceaccounts
+          check_access create serviceaccounts
+          check_access patch serviceaccounts
+
+          echo "Required Kubernetes deployment permissions are available."
+
+      - name: Apply workload service accounts
+        shell: bash
+        run: |
+          kubectl apply \
+            --namespace "$K8S_NAMESPACE" \
+            -f k8s/backend-serviceaccount.yaml \
+            -f k8s/frontend-serviceaccount.yaml
 
       - name: Deploy backend
         shell: bash
