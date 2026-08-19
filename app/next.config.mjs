@@ -1,15 +1,9 @@
-import type { NextConfig } from "next";
-
 const backendUrl =
   process.env.BACKEND_INTERNAL_URL || "http://backend-service:4000";
 
-const nextConfig: NextConfig = {
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
-
+const nextConfig = {
   turbopack: {
-    root: __dirname,
+    root: process.cwd(),
   },
 
   async rewrites() {
