@@ -181,3 +181,6 @@ k8s/*secrets*.yaml
 
 # Terraform saved plans
 *.tfplan
+.report-venv/
+__pycache__/
+*.pyc

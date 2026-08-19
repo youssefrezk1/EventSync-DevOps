@@ -1,0 +1,1074 @@
+---
+name: EventSync CI/CD
+
+on:
+  workflow_dispatch:
+    inputs:
+      deploy:
+        description: Deploy to EventSync EKS after successful CI
+        required: true
+        type: boolean
+        default: false
+
+concurrency:
+  group: eventsync-ci-cd-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  AWS_REGION: us-east-1
+  EKS_CLUSTER: eventsync-cluster
+  K8S_NAMESPACE: eventsync
+  FRONTEND_REPOSITORY: eventsync-frontend
+  BACKEND_REPOSITORY: eventsync-backend
+
+
+jobs:
+
+  # ============================================================
+  # 1. SECRET SECURITY
+  # ============================================================
+  security:
+    name: Secret Security
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Run Gitleaks
+        id: gitleaks
+        uses: gitleaks/gitleaks-action@v3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Record security result
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p reports
+
+          cat > reports/secret-security.txt <<EOF_REPORT
+          Stage: Secret Security
+          Result: ${{ steps.gitleaks.outcome }}
+          Scanner: Gitleaks
+          EOF_REPORT
+
+      - name: Upload secret-security result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eventsync-secret-security
+          path: reports/secret-security.txt
+          retention-days: 30
+
+
+  # ============================================================
+  # 2. TRIVY FILESYSTEM
+  # ============================================================
+  trivy-filesystem:
+    name: Trivy Filesystem
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Generate filesystem vulnerability report
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          format: json
+          output: trivy-filesystem.json
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: "0"
+
+      - name: Enforce filesystem security gate
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          format: table
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"
+          skip-setup-trivy: true
+
+      - name: Upload filesystem report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eventsync-trivy-filesystem
+          path: trivy-filesystem.json
+          retention-days: 30
+
+
+  # ============================================================
+  # 3. FRONTEND CI
+  # ============================================================
+  frontend:
+    name: Frontend CI
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: app
+        run: npm ci
+
+      - name: Run frontend lint
+        id: lint
+        continue-on-error: true
+        working-directory: app
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p ../reports
+          npm run lint 2>&1 |
+            tee ../reports/frontend-lint.log
+
+      - name: Build frontend
+        working-directory: app
+        shell: bash
+        run: |
+          set -o pipefail
+          npm run build 2>&1 |
+            tee ../reports/frontend-build.log
+
+      - name: Frontend dependency audit
+        working-directory: app
+        shell: bash
+        run: |
+          set -o pipefail
+          npm audit --audit-level=critical \
+            2>&1 |
+            tee ../reports/frontend-audit.log || true
+
+      - name: Upload frontend diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eventsync-frontend-ci
+          path: reports/
+          retention-days: 30
+
+
+  # ============================================================
+  # 4. BACKEND CI
+  # ============================================================
+  backend:
+    name: Backend CI
+    runs-on: ubuntu-latest
+
+    env:
+      STRIPE_SECRET_KEY: sk_test_ci_dummy
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
+
+      - name: Check backend syntax
+        working-directory: backend
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p ../reports
+          node --check index.js 2>&1 |
+            tee ../reports/backend-syntax.log
+
+      - name: Run backend tests
+        working-directory: backend
+        shell: bash
+        run: |
+          set -o pipefail
+          npm test 2>&1 |
+            tee ../reports/backend-tests.log
+
+      - name: Backend dependency audit
+        working-directory: backend
+        shell: bash
+        run: |
+          set -o pipefail
+          npm audit --audit-level=critical \
+            2>&1 |
+            tee ../reports/backend-audit.log || true
+
+      - name: Upload backend diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eventsync-backend-ci
+          path: reports/
+          retention-days: 30
+
+
+  # ============================================================
+  # 5. DOCKER BUILD + IMAGE SECURITY
+  # ============================================================
+  docker-security:
+    name: Docker Security
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Build frontend test image
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p reports
+
+          docker build \
+            -t eventsync-frontend:test \
+            ./app 2>&1 |
+            tee reports/docker-frontend-build.log
+
+      - name: Build backend test image
+        shell: bash
+        run: |
+          set -o pipefail
+
+          docker build \
+            -t eventsync-backend:test \
+            ./backend 2>&1 |
+            tee reports/docker-backend-build.log
+
+      - name: Generate frontend Trivy report
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: eventsync-frontend:test
+          format: json
+          output: trivy-frontend.json
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: "0"
+
+      - name: Enforce frontend image security
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: eventsync-frontend:test
+          format: table
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"
+          skip-setup-trivy: true
+
+      - name: Generate backend Trivy report
+        if: always()
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: eventsync-backend:test
+          format: json
+          output: trivy-backend.json
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: "0"
+
+      - name: Enforce backend image security
+        if: always()
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: eventsync-backend:test
+          format: table
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"
+          skip-setup-trivy: true
+
+      - name: Upload Docker security reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eventsync-docker-security
+          path: |
+            reports/
+            trivy-frontend.json
+            trivy-backend.json
+          retention-days: 30
+
+
+  # ============================================================
+  # 6. DOCKER COMPOSE VALIDATION
+  # ============================================================
+  docker-compose-validation:
+    name: Compose Validation
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Create CI environment
+        run: |
+          cat <<'EOF_ENV' > .env.ci
+          PORT=4000
+          MONGO_URI=mongodb://eventsync:eventsync_password@mongodb:27017/eventsync?authSource=admin
+          JWT_SECRET=test_secret
+          JWT_EXPIRES_IN=1d
+          FRONTEND_URL=http://localhost:3000
+          EMAIL=ci@example.com
+          EMAIL_PASSWORD=ci_dummy_password
+          CLOUDINARY_NAME=ci_dummy
+          CLOUDINARY_API_KEY=ci_dummy
+          CLOUDINARY_API_SECRET=ci_dummy
+          USER_EMAIL=ci@example.com
+          STRIPE_SECRET_KEY=sk_test_ci_dummy
+          WORKSHOP_FIXED_PRICE=100
+          EOF_ENV
+
+      - name: Validate Compose configuration
+        env:
+          COMPOSE_ENV_FILE: .env.ci
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p reports
+
+          docker compose config 2>&1 |
+            tee reports/compose-validation.log
+
+      - name: Upload Compose diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eventsync-compose
+          path: reports/
+          retention-days: 30
+
+
+  # ============================================================
+  # 7. INTEGRATION TEST
+  # ============================================================
+  integration-test:
+    name: Integration Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Create CI environment
+        run: |
+          cat <<'EOF_ENV' > .env.ci
+          PORT=4000
+          MONGO_URI=mongodb://eventsync:eventsync_password@mongodb:27017/eventsync?authSource=admin
+          JWT_SECRET=test_secret
+          JWT_EXPIRES_IN=1d
+          FRONTEND_URL=http://localhost:3000
+          EMAIL=ci@example.com
+          EMAIL_PASSWORD=ci_dummy_password
+          CLOUDINARY_NAME=ci_dummy
+          CLOUDINARY_API_KEY=ci_dummy
+          CLOUDINARY_API_SECRET=ci_dummy
+          USER_EMAIL=ci@example.com
+          STRIPE_SECRET_KEY=sk_test_ci_dummy
+          WORKSHOP_FIXED_PRICE=100
+          EOF_ENV
+
+      - name: Start application
+        env:
+          COMPOSE_ENV_FILE: .env.ci
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p reports
+
+          docker compose up \
+            -d \
+            --build \
+            --wait 2>&1 |
+            tee reports/integration-startup.log
+
+      - name: Verify backend
+        shell: bash
+        run: |
+          set -o pipefail
+
+          curl \
+            --fail \
+            --silent \
+            --show-error \
+            http://localhost:4000/api/health \
+            2>&1 |
+            tee reports/integration-backend.log
+
+      - name: Verify frontend
+        shell: bash
+        run: |
+          set -o pipefail
+
+          curl \
+            --fail \
+            --silent \
+            --show-error \
+            -o /dev/null \
+            -w 'HTTP %{http_code}\n' \
+            http://localhost:3000 \
+            2>&1 |
+            tee reports/integration-frontend.log
+
+      - name: Collect Compose state
+        if: always()
+        env:
+          COMPOSE_ENV_FILE: .env.ci
+        shell: bash
+        run: |
+          mkdir -p reports
+
+          docker compose ps \
+            > reports/integration-containers.txt \
+            2>&1 || true
+
+          docker compose logs \
+            --no-color \
+            > reports/integration-application.log \
+            2>&1 || true
+
+      - name: Shutdown application
+        if: always()
+        env:
+          COMPOSE_ENV_FILE: .env.ci
+        run: docker compose down -v
+
+      - name: Upload integration diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eventsync-integration
+          path: reports/
+          retention-days: 30
+
+
+  # ============================================================
+  # 8. CI GATE
+  # ============================================================
+  ci-gate:
+    name: CI Gate
+    runs-on: ubuntu-latest
+
+    needs:
+      - security
+      - trivy-filesystem
+      - frontend
+      - backend
+      - docker-security
+      - docker-compose-validation
+      - integration-test
+
+    if: always()
+
+    steps:
+      - name: Evaluate CI
+        shell: bash
+        run: |
+          failure=0
+
+          check() {
+            name="$1"
+            result="$2"
+
+            printf '%-28s %s\n' "$name" "$result"
+
+            if [ "$result" != "success" ]; then
+              failure=1
+            fi
+          }
+
+          check "Secret Security" \
+            "${{ needs.security.result }}"
+
+          check "Trivy Filesystem" \
+            "${{ needs.trivy-filesystem.result }}"
+
+          check "Frontend" \
+            "${{ needs.frontend.result }}"
+
+          check "Backend" \
+            "${{ needs.backend.result }}"
+
+          check "Docker Security" \
+            "${{ needs.docker-security.result }}"
+
+          check "Compose Validation" \
+            "${{ needs.docker-compose-validation.result }}"
+
+          check "Integration Test" \
+            "${{ needs.integration-test.result }}"
+
+          if [ "$failure" -ne 0 ]; then
+            echo "CI gate failed."
+            exit 1
+          fi
+
+          echo "CI gate passed."
+
+
+  # ============================================================
+  # 9. DEPLOY TO EKS
+  # ============================================================
+  deploy:
+    name: Deploy EventSync
+    runs-on: ubuntu-latest
+
+    needs:
+      - ci-gate
+
+    if: >-
+      ${{
+        needs.ci-gate.result == 'success' &&
+        inputs.deploy == true
+      }}
+
+    permissions:
+      contents: read
+      id-token: write
+
+    outputs:
+      image_tag: ${{ steps.meta.outputs.image_tag }}
+      app_url: ${{ steps.verify.outputs.app_url }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Determine image tag
+        id: meta
+        shell: bash
+        run: |
+          TAG="${GITHUB_SHA::7}"
+
+          echo "image_tag=$TAG" \
+            >> "$GITHUB_OUTPUT"
+
+          echo "Image tag: $TAG"
+
+      - name: Configure AWS credentials with OIDC
+        uses: aws-actions/configure-aws-credentials@v5
+        with:
+          role-to-assume: arn:aws:iam::350769147036:role/GitHubActions-EventSync-Deploy
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: ecr-login
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Check whether SHA images already exist
+        id: images
+        shell: bash
+        run: |
+          TAG="${{ steps.meta.outputs.image_tag }}"
+
+          if aws ecr describe-images \
+            --repository-name "$FRONTEND_REPOSITORY" \
+            --image-ids imageTag="$TAG" \
+            --region "$AWS_REGION" \
+            >/dev/null 2>&1
+          then
+            echo "frontend_exists=true" >> "$GITHUB_OUTPUT"
+            echo "Frontend image already exists; it will be reused."
+          else
+            echo "frontend_exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+          if aws ecr describe-images \
+            --repository-name "$BACKEND_REPOSITORY" \
+            --image-ids imageTag="$TAG" \
+            --region "$AWS_REGION" \
+            >/dev/null 2>&1
+          then
+            echo "backend_exists=true" >> "$GITHUB_OUTPUT"
+            echo "Backend image already exists; it will be reused."
+          else
+            echo "backend_exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Set up Docker Buildx
+        if: >-
+          ${{
+            steps.images.outputs.frontend_exists != 'true' ||
+            steps.images.outputs.backend_exists != 'true'
+          }}
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push frontend
+        if: steps.images.outputs.frontend_exists != 'true'
+        uses: docker/build-push-action@v6
+        with:
+          context: ./app
+          platforms: linux/amd64
+          push: true
+          tags: >-
+            ${{ steps.ecr-login.outputs.registry }}/${{
+            env.FRONTEND_REPOSITORY }}:${{
+            steps.meta.outputs.image_tag }}
+          cache-from: type=gha,scope=eventsync-frontend
+          cache-to: type=gha,mode=max,scope=eventsync-frontend
+
+      - name: Build and push backend
+        if: steps.images.outputs.backend_exists != 'true'
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          platforms: linux/amd64
+          push: true
+          tags: >-
+            ${{ steps.ecr-login.outputs.registry }}/${{
+            env.BACKEND_REPOSITORY }}:${{
+            steps.meta.outputs.image_tag }}
+          cache-from: type=gha,scope=eventsync-backend
+          cache-to: type=gha,mode=max,scope=eventsync-backend
+
+      - name: Configure kubectl
+        run: |
+          aws eks update-kubeconfig \
+            --region "$AWS_REGION" \
+            --name "$EKS_CLUSTER"
+
+      - name: Verify Kubernetes access
+        run: |
+          kubectl auth can-i \
+            update deployments \
+            --namespace "$K8S_NAMESPACE"
+
+      - name: Deploy frontend
+        shell: bash
+        run: |
+          REGISTRY="${{ steps.ecr-login.outputs.registry }}"
+          TAG="${{ steps.meta.outputs.image_tag }}"
+
+          kubectl set image \
+            deployment/frontend \
+            frontend="${REGISTRY}/${FRONTEND_REPOSITORY}:${TAG}" \
+            --namespace "$K8S_NAMESPACE"
+
+      - name: Deploy backend
+        shell: bash
+        run: |
+          REGISTRY="${{ steps.ecr-login.outputs.registry }}"
+          TAG="${{ steps.meta.outputs.image_tag }}"
+
+          kubectl set image \
+            deployment/backend \
+            backend="${REGISTRY}/${BACKEND_REPOSITORY}:${TAG}" \
+            --namespace "$K8S_NAMESPACE"
+
+      - name: Wait for frontend rollout
+        run: |
+          kubectl rollout status \
+            deployment/frontend \
+            --namespace "$K8S_NAMESPACE" \
+            --timeout=5m
+
+      - name: Wait for backend rollout
+        run: |
+          kubectl rollout status \
+            deployment/backend \
+            --namespace "$K8S_NAMESPACE" \
+            --timeout=5m
+
+      - name: Verify public application
+        id: verify
+        shell: bash
+        run: |
+          ALB_DNS="$(kubectl get ingress eventsync \
+            --namespace "$K8S_NAMESPACE" \
+            -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')"
+
+          if [ -z "$ALB_DNS" ]; then
+            echo "Ingress does not have an ALB hostname."
+            exit 1
+          fi
+
+          APP_URL="http://${ALB_DNS}"
+
+          curl \
+            --fail \
+            --silent \
+            --show-error \
+            --retry 5 \
+            --retry-delay 10 \
+            "${APP_URL}/api/health"
+
+          echo
+          echo "Public health verification passed."
+
+          echo "app_url=$APP_URL" \
+            >> "$GITHUB_OUTPUT"
+
+      - name: Collect deployment diagnostics
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p reports
+
+          kubectl get deployments \
+            --namespace "$K8S_NAMESPACE" \
+            -o wide \
+            > reports/kubectl-deployments.txt \
+            2>&1 || true
+
+          kubectl get pods \
+            --namespace "$K8S_NAMESPACE" \
+            -o wide \
+            > reports/kubectl-pods.txt \
+            2>&1 || true
+
+          kubectl get ingress \
+            --namespace "$K8S_NAMESPACE" \
+            -o wide \
+            > reports/kubectl-ingress.txt \
+            2>&1 || true
+
+          kubectl get events \
+            --namespace "$K8S_NAMESPACE" \
+            --sort-by='.lastTimestamp' \
+            > reports/kubectl-events.txt \
+            2>&1 || true
+
+          kubectl logs deployment/backend \
+            --namespace "$K8S_NAMESPACE" \
+            --tail=250 \
+            > reports/backend-logs.txt \
+            2>&1 || true
+
+          kubectl logs deployment/frontend \
+            --namespace "$K8S_NAMESPACE" \
+            --tail=250 \
+            > reports/frontend-logs.txt \
+            2>&1 || true
+
+      - name: Upload deployment diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eventsync-deployment
+          path: reports/
+          retention-days: 30
+
+
+  # ============================================================
+  # 10. FINAL REPORT + EMAIL
+  # ============================================================
+  report:
+    name: Final Report
+    runs-on: ubuntu-latest
+
+    if: always()
+
+    needs:
+      - security
+      - trivy-filesystem
+      - frontend
+      - backend
+      - docker-security
+      - docker-compose-validation
+      - integration-test
+      - ci-gate
+      - deploy
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Download workflow artifacts
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          pattern: eventsync-*
+          path: collected
+          merge-multiple: true
+
+      - name: Collect downloaded reports
+        shell: bash
+        run: |
+          mkdir -p reports
+
+          find collected \
+            -type f \
+            -maxdepth 3 \
+            -print 2>/dev/null || true
+
+          if [ -d collected ]; then
+            find collected \
+              -type f \
+              -exec cp {} reports/ \;
+          fi
+
+      - name: Prepare metadata and status
+        shell: bash
+        run: |
+          cat > reports/metadata.json <<EOF_META
+          {
+            "repository": "${{ github.repository }}",
+            "branch": "${{ github.ref_name }}",
+            "commit": "${{ github.sha }}",
+            "actor": "${{ github.actor }}",
+            "environment": "Development",
+            "aws_region": "${AWS_REGION}",
+            "eks_cluster": "${EKS_CLUSTER}",
+            "app_url": "${{ needs.deploy.outputs.app_url || 'Not deployed' }}"
+          }
+          EOF_META
+
+          cat > reports/status.json <<EOF_STATUS
+          {
+            "security": "${{ needs.security.result }}",
+            "trivy_filesystem": "${{ needs.trivy-filesystem.result }}",
+            "frontend": "${{ needs.frontend.result }}",
+            "backend": "${{ needs.backend.result }}",
+            "docker_security": "${{ needs.docker-security.result }}",
+            "compose": "${{ needs.docker-compose-validation.result }}",
+            "integration": "${{ needs.integration-test.result }}",
+            "ci_gate": "${{ needs.ci-gate.result }}",
+            "deployment": "${{ needs.deploy.result }}"
+          }
+          EOF_STATUS
+
+      - name: Build failure summary
+        shell: bash
+        run: |
+          : > reports/failure-summary.txt
+
+          add_failure() {
+            name="$1"
+            result="$2"
+
+            if [ "$result" = "failure" ]; then
+              echo "==================================================" \
+                >> reports/failure-summary.txt
+              echo "FAILED STAGE: $name" \
+                >> reports/failure-summary.txt
+              echo "==================================================" \
+                >> reports/failure-summary.txt
+              echo \
+                >> reports/failure-summary.txt
+            fi
+          }
+
+          add_failure "Secret Security" \
+            "${{ needs.security.result }}"
+
+          add_failure "Trivy Filesystem" \
+            "${{ needs.trivy-filesystem.result }}"
+
+          add_failure "Frontend CI" \
+            "${{ needs.frontend.result }}"
+
+          add_failure "Backend CI" \
+            "${{ needs.backend.result }}"
+
+          add_failure "Docker Security" \
+            "${{ needs.docker-security.result }}"
+
+          add_failure "Compose Validation" \
+            "${{ needs.docker-compose-validation.result }}"
+
+          add_failure "Integration Test" \
+            "${{ needs.integration-test.result }}"
+
+          add_failure "CI Gate" \
+            "${{ needs.ci-gate.result }}"
+
+          add_failure "Deployment" \
+            "${{ needs.deploy.result }}"
+
+          echo "Relevant error details:" \
+            >> reports/failure-summary.txt
+          echo \
+            >> reports/failure-summary.txt
+
+          grep -RniE \
+            'error|failed|failure|fatal|exception|denied|unauthorized|timeout|timed out|vulnerabilit|unhealthy|readiness|liveness|ImagePull|CrashLoop|BackOff' \
+            reports \
+            --exclude='failure-summary.txt' \
+            --exclude='email.html' \
+            --exclude='*.json' \
+            2>/dev/null \
+            | head -80 \
+            >> reports/failure-summary.txt || true
+
+          if ! grep -q 'FAILED STAGE:' reports/failure-summary.txt; then
+            cat > reports/failure-summary.txt <<'EOF_FAILURE'
+          No pipeline failures detected.
+          EOF_FAILURE
+          fi
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install report dependencies
+        run: |
+          python -m pip install \
+            -r scripts/requirements-reports.txt
+
+      - name: Generate PDF reports
+        run: |
+          python scripts/generate_pipeline_reports.py \
+            --metadata reports/metadata.json \
+            --status reports/status.json \
+            --failure reports/failure-summary.txt \
+            --reports-dir reports
+
+      - name: Create professional email body
+        id: mail
+        shell: bash
+        run: |
+          if [ "${{ needs.ci-gate.result }}" != "success" ]; then
+            STATUS="FAILED"
+            ICON="❌"
+            MESSAGE="Continuous Integration failed. Deployment was not performed."
+          elif [ "${{ needs.deploy.result }}" = "failure" ]; then
+            STATUS="DEPLOYMENT FAILED"
+            ICON="❌"
+            MESSAGE="CI passed, but the EKS deployment failed."
+          elif [ "${{ needs.deploy.result }}" = "success" ]; then
+            STATUS="DEPLOYED"
+            ICON="✅"
+            MESSAGE="CI passed and EventSync was deployed successfully."
+          else
+            STATUS="CI PASSED"
+            ICON="✅"
+            MESSAGE="CI passed. Deployment was not requested for this run."
+          fi
+
+          echo "status=$STATUS" >> "$GITHUB_OUTPUT"
+          echo "icon=$ICON" >> "$GITHUB_OUTPUT"
+
+          FAILURE="$(
+            sed \
+              ':a;N;$!ba;s/\n/<br>/g' \
+              reports/failure-summary.txt
+          )"
+
+          cat > reports/email.html <<EOF_MAIL
+          <!DOCTYPE html>
+          <html>
+          <body style="margin:0;background:#f4f6f8;font-family:Arial,Helvetica,sans-serif;">
+            <table width="100%" cellpadding="0" cellspacing="0" style="padding:32px 12px;background:#f4f6f8;">
+              <tr>
+                <td align="center">
+                  <table width="680" cellpadding="0" cellspacing="0" style="max-width:680px;background:#ffffff;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;">
+                    <tr>
+                      <td style="background:#111827;padding:28px 32px;color:#ffffff;">
+                        <div style="font-size:12px;letter-spacing:2px;color:#9ca3af;">EVENTSYNC DEVOPS</div>
+                        <div style="font-size:28px;font-weight:700;margin-top:8px;">CI/CD Pipeline Report</div>
+                      </td>
+                    </tr>
+
+                    <tr>
+                      <td style="padding:32px;">
+                        <div style="font-size:22px;font-weight:700;color:#111827;">
+                          ${ICON} ${STATUS}
+                        </div>
+
+                        <p style="color:#4b5563;font-size:15px;">
+                          ${MESSAGE}
+                        </p>
+
+                        <table width="100%" cellpadding="8" cellspacing="0" style="border-collapse:collapse;font-size:14px;">
+                          <tr><td>Secret Security</td><td><strong>${{ needs.security.result }}</strong></td></tr>
+                          <tr><td>Trivy Filesystem</td><td><strong>${{ needs.trivy-filesystem.result }}</strong></td></tr>
+                          <tr><td>Frontend CI</td><td><strong>${{ needs.frontend.result }}</strong></td></tr>
+                          <tr><td>Backend CI</td><td><strong>${{ needs.backend.result }}</strong></td></tr>
+                          <tr><td>Docker Security</td><td><strong>${{ needs.docker-security.result }}</strong></td></tr>
+                          <tr><td>Compose Validation</td><td><strong>${{ needs.docker-compose-validation.result }}</strong></td></tr>
+                          <tr><td>Integration Test</td><td><strong>${{ needs.integration-test.result }}</strong></td></tr>
+                          <tr><td>Deployment</td><td><strong>${{ needs.deploy.result }}</strong></td></tr>
+                        </table>
+
+                        <h3 style="margin-top:28px;color:#111827;">Failure Summary</h3>
+
+                        <div style="padding:14px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;color:#374151;font-size:13px;">
+                          ${FAILURE}
+                        </div>
+
+                        <h3 style="margin-top:28px;color:#111827;">Build Information</h3>
+
+                        <table width="100%" cellpadding="6" cellspacing="0" style="font-size:13px;">
+                          <tr><td>Repository</td><td>${{ github.repository }}</td></tr>
+                          <tr><td>Branch</td><td>${{ github.ref_name }}</td></tr>
+                          <tr><td>Commit</td><td>${{ github.sha }}</td></tr>
+                          <tr><td>Actor</td><td>${{ github.actor }}</td></tr>
+                          <tr><td>Image Tag</td><td>${{ needs.deploy.outputs.image_tag || 'N/A' }}</td></tr>
+                          <tr><td>Application</td><td>${{ needs.deploy.outputs.app_url || 'Not deployed' }}</td></tr>
+                        </table>
+
+                        <div style="margin-top:30px;text-align:center;">
+                          <a href="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                             style="display:inline-block;background:#111827;color:#ffffff;text-decoration:none;padding:12px 22px;border-radius:7px;font-weight:600;">
+                            View Complete Workflow
+                          </a>
+                        </div>
+
+                        <p style="margin-top:28px;color:#6b7280;font-size:12px;">
+                          PDF reports and diagnostic files are attached. Complete raw artifacts are retained in GitHub Actions for 30 days.
+                        </p>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+          </body>
+          </html>
+          EOF_MAIL
+
+      - name: Upload consolidated reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eventsync-final-reports
+          path: reports/
+          retention-days: 30
+
+      - name: Send EventSync CI/CD report
+        if: always()
+        uses: dawidd6/action-send-mail@v6
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          secure: true
+          username: ${{ secrets.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          from: 'EventSync DevOps <${{ secrets.MAIL_USERNAME }}>'
+          to: ${{ secrets.MAIL_TO }}
+          subject: >-
+            ${{ steps.mail.outputs.icon }}
+            EventSync CI/CD |
+            ${{ steps.mail.outputs.status }} |
+            ${{ github.ref_name }}
+          html_body: file://reports/email.html
+          attachments: >-
+            reports/EventSync-CI-CD-Report.pdf,
+            reports/EventSync-Security-Report.pdf,
+            reports/EventSync-Deployment-Report.pdf,
+            reports/failure-summary.txt
