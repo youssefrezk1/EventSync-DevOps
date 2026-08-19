@@ -37,6 +37,14 @@ spec:
           ports:
             - containerPort: 4000
 
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+
           envFrom:
             - configMapRef:
                 name: backend-config
