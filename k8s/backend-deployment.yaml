@@ -17,9 +17,22 @@ spec:
         app: backend
 
     spec:
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+
       containers:
         - name: backend
           image: 350769147036.dkr.ecr.us-east-1.amazonaws.com/eventsync-backend:db431d3
+
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
 
           ports:
             - containerPort: 4000

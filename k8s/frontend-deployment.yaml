@@ -17,9 +17,22 @@ spec:
         app: frontend
 
     spec:
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+
       containers:
         - name: frontend
           image: 350769147036.dkr.ecr.us-east-1.amazonaws.com/eventsync-frontend:96aa05f
+
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
 
           ports:
             - containerPort: 3000

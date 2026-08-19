@@ -657,17 +657,6 @@ jobs:
             update deployments \
             --namespace "$K8S_NAMESPACE"
 
-      - name: Deploy frontend
-        shell: bash
-        run: |
-          REGISTRY="${{ steps.ecr-login.outputs.registry }}"
-          TAG="${{ steps.meta.outputs.image_tag }}"
-
-          kubectl set image \
-            deployment/frontend \
-            frontend="${REGISTRY}/${FRONTEND_REPOSITORY}:${TAG}" \
-            --namespace "$K8S_NAMESPACE"
-
       - name: Deploy backend
         shell: bash
         run: |
@@ -675,21 +664,40 @@ jobs:
           TAG="${{ steps.meta.outputs.image_tag }}"
 
           kubectl set image \
-            deployment/backend \
+            -f k8s/backend-deployment.yaml \
             backend="${REGISTRY}/${BACKEND_REPOSITORY}:${TAG}" \
-            --namespace "$K8S_NAMESPACE"
-
-      - name: Wait for frontend rollout
-        run: |
-          kubectl rollout status \
-            deployment/frontend \
+            --local \
+            -o yaml |
+          kubectl apply \
             --namespace "$K8S_NAMESPACE" \
-            --timeout=5m
+            -f -
+
+      - name: Deploy frontend
+        shell: bash
+        run: |
+          REGISTRY="${{ steps.ecr-login.outputs.registry }}"
+          TAG="${{ steps.meta.outputs.image_tag }}"
+
+          kubectl set image \
+            -f k8s/frontend-deployment.yaml \
+            frontend="${REGISTRY}/${FRONTEND_REPOSITORY}:${TAG}" \
+            --local \
+            -o yaml |
+          kubectl apply \
+            --namespace "$K8S_NAMESPACE" \
+            -f -
 
       - name: Wait for backend rollout
         run: |
           kubectl rollout status \
             deployment/backend \
+            --namespace "$K8S_NAMESPACE" \
+            --timeout=5m
+
+      - name: Wait for frontend rollout
+        run: |
+          kubectl rollout status \
+            deployment/frontend \
             --namespace "$K8S_NAMESPACE" \
             --timeout=5m
 
