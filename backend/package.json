@@ -28,7 +28,7 @@
     "node-cron": "^4.2.1",
     "nodemailer": "^9.0.5",
     "puppeteer": "^25.8.0",
-    "stripe": "^19.3.0"
+    "stripe": "^22.5.0"
   },
   "devDependencies": {
     "@types/express": "^5.0.3",
