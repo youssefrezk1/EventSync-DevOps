@@ -134,7 +134,7 @@ flowchart LR
 - React frontend
 - Node.js / Express backend
 - MongoDB
-- Nginx-based frontend container/proxy
+- Next.js frontend running in a production Node.js container
 
 ### DevOps and Cloud
 
@@ -206,7 +206,7 @@ The application is split into independent frontend and backend containers.
 
 ### Frontend
 
-The frontend image packages the web application behind an Nginx-based runtime and includes a container health check. The frontend also acts as the application-facing proxy for backend traffic in the Kubernetes deployment.
+The frontend image packages the Next.js web application in a production Node.js container and includes a container health check. The frontend provides the public application tier, while backend API traffic is routed internally through Kubernetes services.
 
 ### Backend
 
