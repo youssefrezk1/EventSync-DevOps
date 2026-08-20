@@ -27,3 +27,21 @@ resource "aws_eks_addon" "vpc_cni" {
 
   tags = local.common_tags
 }
+
+# ---------------------------------------------------------
+# Metrics Server
+# ---------------------------------------------------------
+
+resource "aws_eks_addon" "metrics_server" {
+  cluster_name  = aws_eks_cluster.main.name
+  addon_name    = "metrics-server"
+  addon_version = "v0.8.1-eksbuild.14"
+
+  resolve_conflicts_on_update = "PRESERVE"
+
+  depends_on = [
+    aws_eks_cluster.main
+  ]
+
+  tags = local.common_tags
+}
