@@ -60,7 +60,7 @@ jobs:
 
       - name: Upload secret-security result
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: eventsync-secret-security
           path: reports/secret-security.txt
@@ -102,7 +102,7 @@ jobs:
 
       - name: Upload filesystem report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: eventsync-trivy-filesystem
           path: trivy-filesystem.json
@@ -161,7 +161,7 @@ jobs:
 
       - name: Upload frontend diagnostics
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: eventsync-frontend-ci
           path: reports/
@@ -221,7 +221,7 @@ jobs:
 
       - name: Upload backend diagnostics
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: eventsync-backend-ci
           path: reports/
@@ -304,7 +304,7 @@ jobs:
 
       - name: Upload Docker security reports
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: eventsync-docker-security
           path: |
@@ -356,7 +356,7 @@ jobs:
 
       - name: Upload Compose diagnostics
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: eventsync-compose
           path: reports/
@@ -459,7 +459,7 @@ jobs:
 
       - name: Upload integration diagnostics
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: eventsync-integration
           path: reports/
@@ -825,7 +825,7 @@ jobs:
 
       - name: Upload deployment diagnostics
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: eventsync-deployment
           path: reports/
@@ -857,7 +857,7 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Download workflow artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         continue-on-error: true
         with:
           pattern: eventsync-*
@@ -1103,7 +1103,7 @@ jobs:
 
       - name: Upload consolidated reports
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: eventsync-final-reports
           path: reports/

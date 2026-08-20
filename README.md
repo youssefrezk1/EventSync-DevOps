@@ -1,3 +1,5 @@
+[![EventSync CI/CD](https://github.com/youssefrezk1/EventSync-DevOps/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/youssefrezk1/EventSync-DevOps/actions/workflows/ci-cd.yml)
+
 # EventSync
 
 EventSync is a campus–wide events and activities hub for the German University in Cairo (GUC).  
