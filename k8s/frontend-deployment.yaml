@@ -27,6 +27,8 @@ spec:
           labelSelector:
             matchLabels:
               app: frontend
+          matchLabelKeys:
+            - pod-template-hash
 
       securityContext:
         seccompProfile:
