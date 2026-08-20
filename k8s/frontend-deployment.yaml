@@ -20,6 +20,14 @@ spec:
       serviceAccountName: eventsync-frontend
       automountServiceAccountToken: false
 
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: DoNotSchedule
+          labelSelector:
+            matchLabels:
+              app: frontend
+
       securityContext:
         seccompProfile:
           type: RuntimeDefault
