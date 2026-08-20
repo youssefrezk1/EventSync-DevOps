@@ -1,574 +1,856 @@
 [![EventSync CI/CD](https://github.com/youssefrezk1/EventSync-DevOps/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/youssefrezk1/EventSync-DevOps/actions/workflows/ci-cd.yml)
 
-# EventSync
+# EventSync DevOps
 
-EventSync is a campus–wide events and activities hub for the German University in Cairo (GUC).  
-It brings together students, staff, professors, vendors, and the event office on a single platform
-to discover, create, and manage workshops, trips, conferences, bazaars, booths, and sports events.
+**Production-oriented DevOps implementation for EventSync, built with Docker, GitHub Actions, Terraform, AWS, Amazon EKS, Kubernetes, and automated security gates.**
+
+EventSync is a campus-wide events and activities platform originally developed for the German University in Cairo (GUC). This repository focuses on the **DevOps engineering around the application**: containerization, automated testing and security scanning, infrastructure as code, cloud infrastructure, Kubernetes orchestration, continuous deployment, workload hardening, reliability controls, and automated reporting.
+
+> **Project focus:** turning an existing full-stack application into a reproducible, security-conscious, cloud-native deployment workflow.
 
 ---
 
 ## Table of Contents
 
-1. [Project Title](#project-title)
-2. [Motivation](#motivation)
-3. [Build Status](#build-status)
-4. [Code Style](#code-style)
-5. [Screenshots](#screenshots)
-6. [Tech / Framework Used](#tech--framework-used)
-7. [Features](#features)
-8. [Code Examples](#code-examples)
-9. [Installation](#installation)
-10. [API References](#api-references)
-11. [Tests](#tests)
-12. [How to Use](#how-to-use)
-13. [Contribute](#contribute)
-14. [Credits](#credits)
-15. [License](#license)
+- [What This Repository Demonstrates](#what-this-repository-demonstrates)
+- [Architecture](#architecture)
+- [Technology Stack](#technology-stack)
+- [DevOps Journey](#devops-journey)
+- [Containerization](#containerization)
+- [CI/CD Pipeline](#cicd-pipeline)
+- [Infrastructure as Code](#infrastructure-as-code)
+- [Kubernetes Architecture](#kubernetes-architecture)
+- [Security and Hardening](#security-and-hardening)
+- [Availability and Reliability](#availability-and-reliability)
+- [Automated Reporting](#automated-reporting)
+- [Repository Structure](#repository-structure)
+- [Deployment Flow](#deployment-flow)
+- [Current Project Status](#current-project-status)
+- [Next Phase: Observability](#next-phase-observability)
+- [Future Research Direction](#future-research-direction)
+- [Engineering Takeaways](#engineering-takeaways)
 
 ---
 
-## Project Title
+## What This Repository Demonstrates
 
-**EventSync – GUC Campus Events Platform**
+This project implements an end-to-end DevOps lifecycle around a real full-stack application.
 
-A full‑stack web application for managing all on‑campus events and activities in one place.
-
----
-
-## Motivation
-
-Universities typically advertise events using scattered channels (posters, emails, WhatsApp groups,
-spreadsheets). This makes it hard to:
-
-- Discover events relevant to your role (Student, Staff, Professor, Vendor, Event Office, Admin).
-- Register for events before they are full.
-- Track event history, favorites, and loyalty benefits.
-- Coordinate approval workflows for workshops, trips, and bazaars.
-
-**EventSync** solves this by providing a **single, role‑aware platform** where:
-
-- Students easily discover and register for activities.
-- Event Office members manage approvals and logistics.
-- Vendors request bazaars and booths.
-- Admins track the full events ecosystem and reporting.
+| Area | Implementation |
+| --- | --- |
+| **Containerization** | Separate frontend and backend Docker images plus Docker Compose integration |
+| **Continuous Integration** | Automated frontend/backend validation and integration testing |
+| **Security** | Gitleaks, Trivy filesystem/image scanning, dependency auditing, hardened containers and Kubernetes workloads |
+| **Infrastructure as Code** | AWS infrastructure provisioned and managed with Terraform |
+| **Cloud Platform** | Amazon VPC, ECR, EKS, IAM, OIDC, NAT Gateway and Application Load Balancer integration |
+| **Orchestration** | Kubernetes Deployments, Services, Ingress, ConfigMaps, Secrets, NetworkPolicy and PodDisruptionBudgets |
+| **Continuous Deployment** | GitHub Actions → AWS OIDC → ECR → Amazon EKS |
+| **Reliability** | Multiple replicas, health probes, resource controls, disruption budgets and topology spreading |
+| **Reporting** | Workflow artifacts, diagnostics, generated PDF reports and email delivery |
 
 ---
 
-## Build Status
+## Architecture
 
-- **Sprint:** 2  
-- **Status:** Feature‑complete for core flows, under active refinement and bug‑fixing.  
-- **Front‑end:** Next.js app builds and runs with `npm run dev` / `npm run build`.  
-- **Back‑end:** Express server runs on `http://localhost:4000`.  
-- **Known issues:**
-  - Some UI polish and responsive tweaks are still in progress.
-  - Error messages from some API endpoints are not yet localized for the UI.
+### Runtime Architecture
 
----
+```mermaid
+flowchart TB
+    U[User / Browser] --> ALB[AWS Application Load Balancer]
 
-## Code Style
+    subgraph AWS["AWS Cloud"]
+        subgraph VPC["EventSync VPC"]
+            ALB
 
-The project uses a consistent, modern TypeScript / React style:
+            subgraph EKS["Amazon EKS Cluster"]
+                subgraph FE["Frontend Workload"]
+                    FE1[Frontend Pod]
+                    FE2[Frontend Pod]
+                end
 
-- **Language:** TypeScript (`.ts` / `.tsx`) for both front‑end and most back‑end logic.
-- **Framework:** Next.js 14 App Router (`app/` directory).
-- **Styling:** MUI (`@mui/material`) + custom theme in `app/app/lib/theme.tsx`.
-- **Conventions:**
-  - Components are **PascalCase** (`EventCard.tsx`, `FavoritesButton.tsx`).
-  - Hooks and utilities are **camelCase** (`useEvents`, `roleToPath`).
-  - No `any` unless absolutely necessary; prefer typed interfaces.
-  - Prettier / ESLint settings from `eslint.config.mjs` ensure consistent formatting.
+                FESVC[Frontend Service]
 
-When contributing, please run your code through ESLint and follow the existing patterns in
-`app/app/shared` and `app/app/components`.
+                subgraph BE["Backend Workload"]
+                    BE1[Backend Pod]
+                    BE2[Backend Pod]
+                end
 
----
+                BESVC[Backend Service]
 
-## Screenshots
+                FESVC --> FE1
+                FESVC --> FE2
+                FE1 --> BESVC
+                FE2 --> BESVC
+                BESVC --> BE1
+                BESVC --> BE2
+            end
+        end
 
-### Student Home / Hero section
-![Home 1](docs/screenshots/Home.png)
-![Home 2](docs/screenshots/Home2.png)
-![Home 3](docs/screenshots/Home3.png)
-![Home 4](docs/screenshots/Home4.png)
+        ECRF[ECR Frontend Repository]
+        ECRB[ECR Backend Repository]
+    end
 
-### Student dashboard – events list
-![Events 1](docs/screenshots/Events.png)
-![Events 2](docs/screenshots/Events2.png)
-
-### Student dashboard – courts reservation
-![Courts 1](docs/screenshots/Courts.png)
-![Courts 2](docs/screenshots/Courts2.png)
-
-### Student dashboard – gym classes reservation
-![Gym 1](docs/screenshots/Gym.png)
-![Gym 2](docs/screenshots/Gym2.png)
-
-### Event Office – analytics and reports page
-![Analytics 1](docs/screenshots/Analytics.png)
-![Analytics 2](docs/screenshots/Analytics2.png)
-
-### Vendor booth registration
-![Booth 1](docs/screenshots/Booth.png)
-![Booth 2](docs/screenshots/Booth2.png)
-![Booth 3](docs/screenshots/Booth3.png)
-
-### Workshop / trip detail page
-![Workshop 1](docs/screenshots/Workshop.png)
-![Workshop 2](docs/screenshots/Workshop2.png)
-![Workshop 3](docs/screenshots/Workshop3.png)
-![Workshop 4](docs/screenshots/Workshop4.png)
-
-
----
-
-## Tech / Framework Used
-
-**Front‑end**
-
-- **Next.js 14** (App Router, `app/` directory)
-- **React 18** with client components where needed (`"use client"`)
-- **TypeScript**
-- **MUI (Material UI)** for layout, grid, typography, buttons, dialogs, tables
-- **Axios** for HTTP requests (`app/api.ts`)
-
-**Back‑end**
-
-- **Node.js + Express**
-- **MongoDB + Mongoose** models for Trips, Workshops, Bazaars, Conferences, Booths, Users
-- **JWT** authentication & role‑based access control
-
-**Tooling**
-
-- ESLint / TypeScript config in `eslint.config.mjs` and `tsconfig.json`
-- npm scripts defined in `package.json`
-
----
-
-## Features
-
-> This section lists the **currently implemented** features (Sprint 2).
-
-- **Role‑based Dashboards**
-  - Student, Staff, Professor, Vendor, Event Office, Admin
-  - Each dashboard has its own navigation, event views, and permissions.
-
-- **Events Catalog**
-  - Unified events listing with support for **workshops**, **trips**, **bazaars**, **conferences**, and **booths**.
-  - Search / filter functionality by name, type, date, and location (see dashboards’ Events pages).
-
-- **Event Discovery on Landing Page**
-  - Public home page with hero section and role‑aware CTA (login / sign up).
-  - Highlight cards for sample events by type (workshops, trips, bazaars, conferences, booths).
-
-- **Registration & Favorites**
-  - Students and staff can register for events (where allowed).
-  - Favorites system with `FavoritesButton` and favorites dashboard section.
-
-- **Notifications**
-  - `NotificationBell` shows notifications for event approvals, reminders, workshop status changes, etc.
-  - Notifications deep‑link into the relevant dashboard page or event detail.
-
-- **Vendor & Bazaar Management**
-  - Vendors can request participation in bazaars and booths.
-  - Event Office / Admin can review, approve, or reject requests.
-
-- **Loyalty Program (Points)**
-  - Some dashboards include a loyalty program section where users accumulate points
-    based on participation.
-
-- **Role‑based Auth & Redirects**
-  - Auth pages under `app/app/dashboards/auth` handle login + signup for multiple roles.
-  - Token decoding and redirect logic routes each user to the correct dashboard.
-
----
-
-## Code Examples
-
-Below are **5+ concise code snippets** that demonstrate key parts of the system.
-
-### 1. Axios API Client (`app/api.ts`)
-
-```ts
-// app/api.ts
-import axios from "axios";
-
-export const api = axios.create({
-  baseURL: "http://localhost:4000", // backend URL
-});
-
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem("token");
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
+    ALB --> FESVC
+    ECRF -. container image .-> FE1
+    ECRF -. container image .-> FE2
+    ECRB -. container image .-> BE1
+    ECRB -. container image .-> BE2
 ```
 
-### 2. Events Hook (`app/app/shared/services.tsx` – simplified)
+The public entry point is an **internet-facing AWS Application Load Balancer** managed through Kubernetes Ingress. The frontend is exposed through the ALB, while application traffic to the backend is handled internally through Kubernetes services.
 
-```ts
-// useEvents hook – fetches events by type or all events
-export const useEvents = (eventType?: string) => {
-  const [events, setEvents] = useState<Event[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+The EKS worker nodes run in **private subnets**, while public networking components provide the required external connectivity. Terraform manages the underlying AWS infrastructure.
 
-  const fetchEvents = async (filters: Partial<SearchFilters> = {}) => {
-    setLoading(true);
-    setError(null);
+### CI/CD Architecture
 
-    try {
-      const params = new URLSearchParams();
-      if (filters.search) params.append("search", filters.search);
-      // ... other filters ...
+```mermaid
+flowchart LR
+    DEV[Developer Push / Manual Dispatch] --> CI[GitHub Actions CI]
 
-      let endpoint = "/api/events";
-      if (eventType && eventType !== "all") {
-        endpoint = `/api/events/type/${eventType}`;
-      }
+    CI --> SEC[Security Scans]
+    CI --> APP[Frontend & Backend CI]
+    CI --> DOCKER[Docker Validation]
+    CI --> INT[Integration Tests]
 
-      const response = await api.get(`${endpoint}?${params.toString()}`);
-      setEvents(response.data);
-    } catch (err: any) {
-      setError(err.response?.data?.message || "Failed to fetch events");
-    } finally {
-      setLoading(false);
-    }
-  };
+    SEC --> GATE[CI Gate]
+    APP --> GATE
+    DOCKER --> GATE
+    INT --> GATE
 
-  return { events, loading, error, fetchEvents };
-};
-```
-
-### 3. AuthGuard Component (Role & Token Check)
-
-```tsx
-// app/app/components/AuthGuard.tsx (excerpt)
-export default function AuthGuard({ allowedRoles = [], children }: AuthGuardProps) {
-  const router = useRouter();
-  const [checked, setChecked] = useState(false);
-
-  useEffect(() => {
-    async function verifyUser() {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        router.push("/dashboards/auth/login");
-        return;
-      }
-
-      try {
-        const res = await api.get("/auth/me");
-        const role = res.data?.user?.role;
-
-        if (allowedRoles.length && !allowedRoles.includes(role)) {
-          router.push("/unauthorized");
-          return;
-        }
-      } catch (err) {
-        localStorage.removeItem("token");
-        router.push("/dashboards/auth/login");
-      } finally {
-        setChecked(true);
-      }
-    }
-
-    verifyUser();
-  }, [allowedRoles, router]);
-
-  if (!checked) return <CircularProgress />;
-  return <>{children}</>;
-}
-```
-
-### 4. Role‑Based Redirect After Login
-
-```tsx
-// app/app/dashboards/auth/page.tsx (excerpt)
-useEffect(() => {
-  const storedToken = localStorage.getItem("token");
-  const urlParams = new URLSearchParams(window.location.search);
-  const queryToken = urlParams.get("token");
-  const activeToken = queryToken || storedToken;
-
-  if (!activeToken) {
-    setToken("No token found");
-    return;
-  }
-
-  const decoded = jwtDecode<DecodedToken>(activeToken);
-
-  switch (decoded.role) {
-    case "admin":
-      router.push("/dashboards/admin");
-      break;
-    case "event-office":
-      router.push("/dashboards/eventOffice");
-      break;
-    case "vendor":
-      router.push("/dashboards/vendor");
-      break;
-    case "student":
-      router.push("/dashboards/student");
-      break;
-    // ... more roles ...
-    default:
-      router.push("/dashboards/auth/login");
-  }
-}, [router]);
-```
-
-### 5. Event Card Rendering on Landing Page (Simplified)
-
-```tsx
-// app/app/page.tsx (excerpt)
-const renderEventCard = (event: EventData, label: string) => (
-  <Card
-    elevation={0}
-    onClick={() => handleEventClick(event)}
-    sx={{
-      height: "100%",
-      minHeight: 200,
-      borderRadius: 3,
-      border: `1px solid ${theme.palette.primary.light}30`,
-      bgcolor: theme.palette.background.paper,
-      boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
-      transition: "all 0.3s ease",
-      cursor: "pointer",
-      "&:hover": {
-        transform: "translateY(-4px)",
-        boxShadow: `0 8px 24px ${theme.palette.primary.main}15`,
-      },
-    }}
-  >
-    <CardContent>
-      <Chip label={label} size="small" />
-      <Typography variant="h6">{event.name}</Typography>
-      <Typography variant="body2" color="text.secondary">
-        {event.location}
-      </Typography>
-    </CardContent>
-  </Card>
-);
+    GATE -->|Pass + deployment requested| OIDC[AWS OIDC Authentication]
+    OIDC --> BUILD[Build / Reuse Images]
+    BUILD --> ECR[Amazon ECR]
+    ECR --> EKS[Deploy to Amazon EKS]
+    EKS --> VERIFY[Rollout & Application Verification]
+    VERIFY --> REPORT[Reports, Artifacts & Email]
 ```
 
 ---
 
-## Installation
+## Technology Stack
 
-### Prerequisites
+### Application
 
-- **Node.js** >= 18
-- **npm** >= 9
-- **MongoDB** running locally or accessible via connection string
+- React frontend
+- Node.js / Express backend
+- MongoDB
+- Nginx-based frontend container/proxy
 
-### 1. Clone the Repository
+### DevOps and Cloud
 
-```bash
-git clone https://github.com/<your-org>/EventSync.git
-cd EventSync/app
+- **Docker** — application containerization
+- **Docker Compose** — local/integration orchestration
+- **GitHub Actions** — CI/CD automation
+- **Terraform** — AWS infrastructure as code
+- **AWS ECR** — private container registries
+- **Amazon EKS** — managed Kubernetes control plane
+- **Amazon VPC** — isolated cloud networking
+- **AWS IAM** — infrastructure and workload permissions
+- **AWS OIDC / STS** — short-lived CI/CD authentication
+- **AWS Load Balancer Controller** — Kubernetes-to-ALB integration
+- **Kubernetes** — application orchestration
+- **Gitleaks** — secret detection
+- **Trivy** — filesystem and container vulnerability scanning
+- **Dependabot** — automated dependency update checks
+
+---
+
+## DevOps Journey
+
+The repository was developed incrementally rather than as a single infrastructure dump.
+
+```text
+Application
+    │
+    ▼
+Containerization
+    │
+    ▼
+CI + Automated Tests
+    │
+    ▼
+Security Scanning
+    │
+    ▼
+Terraform AWS Infrastructure
+    │
+    ▼
+Amazon EKS Deployment
+    │
+    ▼
+Automated Continuous Deployment
+    │
+    ▼
+Unified CI/CD + Reporting
+    │
+    ▼
+Container & Kubernetes Hardening
+    │
+    ▼
+Network Policies + Resource Controls
+    │
+    ▼
+PDBs + Topology Spreading
+    │
+    ▼
+Observability  ← next phase
 ```
 
-### 2. Install Dependencies
+The Git history reflects this progression: CI and security validation were established first, followed by Terraform infrastructure, Kubernetes deployment, ALB integration, AWS OIDC-based CD, unified reporting, container/workload hardening, resource controls, network policy enforcement, Metrics Server management, PodDisruptionBudgets and topology-aware replica placement.
 
-```bash
-npm install
+---
+
+## Containerization
+
+The application is split into independent frontend and backend containers.
+
+### Frontend
+
+The frontend image packages the web application behind an Nginx-based runtime and includes a container health check. The frontend also acts as the application-facing proxy for backend traffic in the Kubernetes deployment.
+
+### Backend
+
+The backend is packaged independently so that it can be built, scanned, versioned and deployed separately from the frontend.
+
+### Docker Compose
+
+Docker Compose is used as part of CI to validate the application as an integrated system before cloud deployment.
+
+The integration stage:
+
+1. Builds/starts the application stack.
+2. Exercises the running application.
+3. Captures container state and application logs.
+4. Shuts the environment down with volumes removed.
+5. Uploads diagnostics as workflow artifacts.
+
+This provides a deployment gate beyond isolated package-level tests.
+
+---
+
+## CI/CD Pipeline
+
+The repository uses a **unified GitHub Actions pipeline**.
+
+### CI stages
+
+```text
+┌─────────────────────────────┐
+│       Secret Security       │  Gitleaks
+├─────────────────────────────┤
+│      Trivy Filesystem       │  HIGH / CRITICAL gate
+├─────────────────────────────┤
+│         Frontend CI         │  install, lint, build, audit
+├─────────────────────────────┤
+│          Backend CI         │  install, tests, audit
+├─────────────────────────────┤
+│       Docker Security       │  build + Trivy image scans
+├─────────────────────────────┤
+│    Docker Compose Check     │  configuration validation
+├─────────────────────────────┤
+│      Integration Test       │  full application validation
+└──────────────┬──────────────┘
+               │
+               ▼
+        ┌─────────────┐
+        │   CI Gate   │
+        └──────┬──────┘
+               │ success
+               ▼
+        Optional CD stage
 ```
 
-### 3. Configure Environment Variables
+The **CI Gate** evaluates all required upstream jobs. Deployment is not allowed to proceed when a required CI stage fails.
 
-Create a `.env` file in the backend root (if not already present) and define the following:
+### Continuous Deployment
 
-```bash
-PORT=4000
-MONGO_URI=mongodb+srv://anbardummy:2005@cluster0.olnsayf.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0
-JWT_SECRET=<REDACTED>
-JWT_EXPIRES_IN=7d
-FRONTEND_URL=http://localhost:3000 
-EMAIL=bodyanbar2005@gmail.com
-EMAIL_PASSWORD=<REDACTED>
-CLOUDINARY_NAME=dl7601b7a
-CLOUDINARY_API_KEY=114141452979866
-CLOUDINARY_API_SECRET=<REDACTED>
-USER_EMAIL=bodyanbar2005@gmail.com
-CLIENT_ID=1080606868729-5e031oo2ig5j8laeghode8e97ke6s2dg.apps.googleusercontent.com
-CLIENT_SECRET=<REDACTED>
-REFRESH_TOKEN=<REDACTED>
-STRIPE_SECRET_KEY=<REDACTED>
-STRIPE_WEBHOOK_SECRET=<REDACTED>
+When deployment is requested and the CI gate succeeds, the workflow:
+
+1. Creates an immutable image tag from the Git commit SHA.
+2. Authenticates to AWS using **GitHub Actions OIDC**.
+3. Logs in to Amazon ECR.
+4. Builds and pushes frontend/backend images when required.
+5. Configures `kubectl` for the EKS cluster.
+6. Verifies the Kubernetes permissions required by the deployment.
+7. Applies workload service accounts.
+8. Applies NetworkPolicy configuration.
+9. Applies PodDisruptionBudgets.
+10. Deploys the new backend and frontend image versions.
+11. Verifies rollout/application state.
+12. Generates deployment and security reports.
+
+### Why OIDC?
+
+The deployment workflow assumes an AWS IAM role using GitHub's OIDC identity token rather than storing permanent AWS access keys in GitHub.
+
+```text
+GitHub Actions
+      │
+      │ OIDC identity token
+      ▼
+AWS STS / IAM Role
+      │
+      ├── ECR permissions
+      └── EKS deployment access
 ```
 
-For the Next.js app you can add a `.env.local` if you need to override any defaults (e.g., API base URL).
+This reduces long-lived credential exposure and allows the CI/CD trust relationship to be constrained to the intended repository/workflow context.
 
-### 4. Run the Back‑end
+---
 
-```bash
-cd backend
-npm run dev
+## Infrastructure as Code
+
+AWS infrastructure is managed through Terraform.
+
+### Provisioned Infrastructure
+
+The Terraform configuration includes:
+
+- EventSync VPC
+- Two public subnets
+- Two private subnets
+- Internet Gateway
+- NAT Gateway and Elastic IP
+- Public and private route tables
+- Amazon ECR frontend repository
+- Amazon ECR backend repository
+- Amazon EKS cluster
+- EKS managed node group
+- EKS/IAM roles and policy attachments
+- EKS OIDC provider
+- AWS Load Balancer Controller IAM integration
+- GitHub Actions deployment IAM integration
+- EKS access configuration
+- Kubernetes networking-related EKS add-on configuration
+- Metrics Server management
+
+### Network Layout
+
+```text
+                         Internet
+                            │
+                    Internet Gateway
+                            │
+             ┌──────────────┴──────────────┐
+             │                             │
+       Public Subnet A               Public Subnet B
+       us-east-1a                    us-east-1b
+             │                             │
+             └──────── AWS ALB ────────────┘
+             │
+         NAT Gateway
+             │
+      ┌──────┴───────────────────────┐
+      │                              │
+Private Subnet A                Private Subnet B
+us-east-1a                      us-east-1b
+      │                              │
+      └────── EKS Worker Nodes ──────┘
 ```
 
-The server should start at `http://localhost:4000`.
+The managed node group uses private subnets across two Availability Zones. Its configured baseline is **two on-demand `t3.small` nodes**, with a maximum size of three.
 
-### 5. Run the Front‑end (in a Seperate Terminal from the Back-end)
+### ECR
 
-```bash
-cd app
-npm run dev
+Separate repositories are maintained for frontend and backend images. Image tags are immutable and ECR scan-on-push is enabled.
+
+### Terraform Outputs
+
+The configuration exposes useful deployment outputs including:
+
+- AWS region
+- project/environment
+- frontend and backend ECR repository URLs
+- VPC ID
+- public/private subnet IDs
+- NAT Gateway ID
+- EKS cluster name and endpoint
+- managed node group name
+- Load Balancer Controller role ARN
+- GitHub Actions CD role ARN
+
+---
+
+## Kubernetes Architecture
+
+The application runs in the `eventsync` namespace.
+
+### Workloads
+
+Both application tiers use Kubernetes Deployments:
+
+```text
+Frontend Deployment
+├── Replica 1
+└── Replica 2
+
+Backend Deployment
+├── Replica 1
+└── Replica 2
 ```
 
-Visit: `http://localhost:3000`
+Each workload is configured with **two replicas**.
+
+### Services
+
+Kubernetes Services provide stable internal networking between application components.
+
+```text
+Internet
+   │
+   ▼
+AWS ALB
+   │
+   ▼
+Ingress
+   │
+   ▼
+Frontend Service
+   │
+   ├── Frontend Pod 1
+   └── Frontend Pod 2
+            │
+            ▼
+      Backend Service
+            │
+            ├── Backend Pod 1
+            └── Backend Pod 2
+```
+
+### Ingress
+
+The Kubernetes Ingress uses the AWS Load Balancer Controller and requests an:
+
+- internet-facing ALB
+- IP target mode
+- ALB health check
+- HTTP success range of `200-399`
+
+### Configuration
+
+Application configuration is separated from container images using Kubernetes configuration objects where appropriate.
+
+Sensitive values are expected to be handled separately from public repository documentation and are not reproduced in this README.
 
 ---
 
-## API References
+## Security and Hardening
 
-Base URL: `http://localhost:4000`
+Security is implemented across source control, CI, containers, AWS authentication and Kubernetes.
 
-### Authentication
+### Source and Dependency Security
 
-- **POST** `/api/auth/login`  
-  Request body: `{ email, password }`  
-  Response: `{ token, user }` with `role` used for redirects.
+**Gitleaks** scans repository history/content for exposed secrets.
 
-- **POST** `/api/auth/signup/student`  
-  Create a new student account.
+**Trivy** scans:
 
-- **POST** `/api/auth/signup/staff`  
-  Create a new staff account.
+- repository filesystem
+- frontend container image
+- backend container image
 
-### Events
+HIGH and CRITICAL findings are used as security gates for the relevant scans.
 
-- **GET** `/api/events`  
-  Returns all visible events (trips, workshops, bazaars, conferences, booths), optionally filtered
-  by `search`, `location`, `date`, `sortBy`, `sortOrder` query parameters.
+Frontend/backend dependency audits are also captured during CI, and Dependabot is configured for recurring dependency checks.
 
-- **GET** `/api/events/type/:type`  
-  Returns events for a single type. `type` ∈ `trips | workshops | bazaars | conferences | booths`.
+### Container Security
 
-- **GET** `/api/events/:id`  
-  Returns a single event document by ID (type‑specific logic in controllers).
+The container hardening work includes measures such as:
 
-### Favorites
+- non-root runtime execution
+- reduced runtime privileges
+- application/container health checks
+- remediation of identified application/container vulnerabilities
 
-- **GET** `/api/favorites` – list current user’s favorite events.  
-- **POST** `/api/favorites` – add a favorite `{ eventId, eventType }`.  
-- **DELETE** `/api/favorites/:id` – remove favorite by ID.
+### Kubernetes Workload Security
 
----
+Workload manifests include hardened pod/container settings, including:
 
-## Tests
+- dedicated frontend/backend ServiceAccounts
+- `automountServiceAccountToken: false` where application workloads do not require Kubernetes API credentials
+- `RuntimeDefault` seccomp profile
+- explicit resource requests and limits
+- NetworkPolicy controls
+- health/readiness/liveness behavior
+- disruption controls
+- topology-aware replica scheduling
 
-For Sprint 2, testing is primarily done using **Postman** collections.
+### Network Policy
 
-### 1. Bazaar Payment – redirect to stripe
-![Bazaar Payment](docs/screenshots/BazaarPayment.jpeg)
+Backend ingress is restricted using Kubernetes NetworkPolicy rather than relying only on application-level assumptions.
 
-`POST /api/payments/bazaar/[id]/pay` returns stripe url + session id.
+### AWS Authentication and IAM
 
----
+Two important identity patterns are used:
 
-### 2. Booth Payment – failed
-![Booth Payment Fail](docs/screenshots/BoothFail.jpeg)
+**GitHub Actions → AWS**
 
-Same endpoint but with rejected booth instead of accepted bazaar returns error message.
+```text
+GitHub OIDC
+    │
+    ▼
+Deployment IAM Role
+    │
+    ├── ECR
+    └── EKS
+```
 
----
+**AWS Load Balancer Controller → AWS**
 
-### 3. Cancelling a Rejected Booth Registration
-![Cancel Fail](docs/screenshots/BoothCancelFail.jpeg)
+```text
+Kubernetes ServiceAccount
+    │
+    ▼
+EKS OIDC Provider
+    │
+    ▼
+IAM Role
+    │
+    ▼
+AWS Load Balancer APIs
+```
 
-`POST /api/payments/booths/[id]/cancel` returns an error message as this booth is rejected.
-
----
-
-### 4. Workshop Payment - redirect to stripe
-![Workshop Payment](docs/screenshots/WorkshopPayment.jpeg)
-
-`POST /api/payments/payforworkshop/[id]` returns stripe url and session id.
-
----
-
-### 5. Cancelling Workshop Successfully
-![Workshop Cancellation](docs/screenshots/WorkshopCancel.jpeg)
-
-`POST /api/payments/workshops/[id]/cancel` returns cancellation success message.
-
----
-
-You can import a Postman collection (not included here by default) with the above requests and run them as a simple automated test suite.
-
-
----
-
-## How to Use
-
-1. **Open the app** at `http://localhost:3000`.
-2. **Sign up** as a student, staff, professor, vendor, or event office user.
-3. **Log in** and you will be redirected automatically to the correct dashboard.
-4. Use the **Events** / **Workshops** / **Trips** / **Bazaars** / **Conferences** / **Booths**
-   tabs to explore activities relevant to your role.
-5. **Register** for events (if allowed) or mark them as **favorites** for later.
-6. If you are part of Event Office or Admin, you can **review requests**, **approve / reject**
-   events, and access **reports** and **loyalty program** dashboards.
-
-The landing page is also usable for visitors: it highlights sample events and provides
-clear CTAs to log in or sign up.
+The Load Balancer Controller trust policy is constrained to its Kubernetes service account identity.
 
 ---
 
-## Contribute
+## Availability and Reliability
 
-We welcome contributions that improve the UI/UX, add tests, or extend event types.
+The Kubernetes layer includes several controls intended to make application deployment more resilient.
 
-To contribute:
+### Multiple Replicas
 
-1. Fork the repository.
-2. Create a new branch: `git checkout -b feature/my-improvement`.
-3. Make your changes and ensure `npm run lint` (if configured) passes.
-4. Add or update tests (Postman or Jest) where relevant.
-5. Submit a Pull Request describing **what** you changed and **why**.
+Both frontend and backend run with two replicas rather than a single application pod.
 
-Please avoid large, unrelated changes in a single PR – keep contributions focused and easy to review.
+### Topology Spread Constraints
+
+Replica scheduling uses hostname topology constraints so replicas are spread across worker nodes rather than intentionally concentrating a workload on one node.
+
+The configuration is revision-aware using the pod template hash, helping Kubernetes spread replicas belonging to the same Deployment revision.
+
+### PodDisruptionBudgets
+
+Frontend and backend PodDisruptionBudgets protect workload availability during voluntary disruptions such as node maintenance.
+
+### Resource Requests and Limits
+
+Workloads define CPU/memory requests and limits, improving scheduling predictability and reducing the risk of one container consuming uncontrolled node resources.
+
+### Health Checks
+
+Health/readiness/liveness mechanisms are used so failed or unready workloads can be identified before they receive normal application traffic.
+
+### Metrics Server
+
+Metrics Server is managed as part of the infrastructure configuration, providing Kubernetes resource metrics needed for cluster/workload visibility and future scaling work.
 
 ---
 
-## Credits
+## Automated Reporting
 
-- **Team Members:**  
-  - Omar Adham 58-2539
-  - AbdelRahman Anbar 58-7433
-  - Salma Ibrahim 58-4017
-  - Aly Talaat 58-4123
-  - Mohammed Wahba 58-21320
-  - Mohamed Ayman 58-13475
-  - Youssef Rezk 59-30006
-  - Kareem Wael 59-30008
-  - Mohamed Karim 58-1483
-  - Amr Mostafa 58-14976
+A major part of the pipeline is making CI/CD results inspectable after execution.
 
-- **Resources Used:**  
-  - Great Learning article on how to write a good README (for structure & guidelines).  
-  - MUI documentation for components and theming.  
-  - Next.js & React official docs for routing and best practices.  
-  - Any additional tutorials, StackOverflow answers, or libraries used in the project.
+The workflow collects:
+
+- security scan results
+- frontend/backend CI logs
+- Docker build diagnostics
+- integration-test container state
+- integration application logs
+- vulnerability data
+- deployment results
+- failure summaries
+
+Artifacts are retained in GitHub Actions for **30 days**.
+
+The final reporting stage generates consolidated PDF reports, including CI/CD, security and deployment information, and can deliver the reports by email.
+
+```text
+Pipeline Results
+      │
+      ├── Raw diagnostics
+      ├── Security data
+      ├── Deployment data
+      │
+      ▼
+Report Generation
+      │
+      ├── CI/CD PDF
+      ├── Security PDF
+      ├── Deployment PDF
+      └── Failure summary
+      │
+      ├── GitHub Actions artifacts
+      └── Email report
+```
+
+---
+
+## Repository Structure
+
+```text
+EventSync-DevOps/
+│
+├── .github/
+│   ├── workflows/
+│   │   └── ci-cd.yml
+│   └── dependabot.yml
+│
+├── app/                         # Frontend application
+│   ├── Dockerfile
+│   └── ...
+│
+├── backend/                     # Backend application
+│   ├── Dockerfile
+│   └── ...
+│
+├── k8s/                         # Kubernetes manifests
+│   ├── backend-configmap.yaml
+│   ├── backend-deployment.yaml
+│   ├── backend-networkpolicy.yaml
+│   ├── backend-pdb.yaml
+│   ├── backend-service.yaml
+│   ├── backend-serviceaccount.yaml
+│   ├── frontend-deployment.yaml
+│   ├── frontend-pdb.yaml
+│   ├── frontend-service.yaml
+│   ├── frontend-serviceaccount.yaml
+│   ├── ingress.yaml
+│   ├── namespace.yaml
+│   └── aws-load-balancer-controller-serviceaccount.yaml
+│
+├── terraform/                   # AWS infrastructure as code
+│   ├── ecr.tf
+│   ├── eks.tf
+│   ├── iam.tf
+│   ├── internet.tf
+│   ├── load-balancer-controller-iam.tf
+│   ├── locals.tf
+│   ├── nat.tf
+│   ├── nodegroup.tf
+│   ├── oidc.tf
+│   ├── outputs.tf
+│   ├── provider.tf
+│   ├── routes.tf
+│   ├── subnets.tf
+│   └── ...
+│
+├── reports/                     # Generated/collected reporting data
+├── docker-compose.yaml
+└── README.md
+```
+
+> The structure above highlights the DevOps-relevant parts of the repository rather than attempting to enumerate every application source file.
+
+---
+
+## Deployment Flow
+
+A successful deployment follows this path:
+
+```text
+1. Developer pushes code / starts workflow
+                  │
+                  ▼
+2. GitHub Actions checks out repository
+                  │
+                  ▼
+3. Secret + vulnerability scanning
+                  │
+                  ▼
+4. Frontend/backend validation
+                  │
+                  ▼
+5. Docker build + image security scans
+                  │
+                  ▼
+6. Docker Compose + integration validation
+                  │
+                  ▼
+7. CI Gate
+                  │
+             PASS │
+                  ▼
+8. GitHub obtains AWS credentials via OIDC
+                  │
+                  ▼
+9. Images tagged with commit SHA
+                  │
+                  ▼
+10. Images pushed to Amazon ECR
+                  │
+                  ▼
+11. Kubernetes manifests/security controls applied
+                  │
+                  ▼
+12. Frontend/backend Deployments updated
+                  │
+                  ▼
+13. EKS rollout/application verified
+                  │
+                  ▼
+14. Diagnostics + PDF reports generated
+                  │
+                  ▼
+15. Artifacts retained / report email sent
+```
+
+This creates traceability between a Git commit, its CI results, container image tag and deployed Kubernetes revision.
+
+---
+
+## Current Project Status
+
+The current DevOps implementation includes:
+
+- [x] Frontend containerization
+- [x] Backend containerization
+- [x] Docker Compose integration environment
+- [x] Unified GitHub Actions CI/CD workflow
+- [x] Secret scanning with Gitleaks
+- [x] Filesystem vulnerability scanning with Trivy
+- [x] Container image vulnerability scanning with Trivy
+- [x] Frontend/backend CI
+- [x] Integration testing
+- [x] CI deployment gate
+- [x] Terraform AWS infrastructure
+- [x] Amazon ECR repositories
+- [x] Amazon EKS cluster and managed worker nodes
+- [x] Kubernetes deployments and services
+- [x] AWS Application Load Balancer ingress
+- [x] GitHub Actions AWS OIDC authentication
+- [x] Automated ECR publishing and EKS deployment
+- [x] Hardened Kubernetes workload identities
+- [x] Kubernetes NetworkPolicy
+- [x] Resource requests and limits
+- [x] PodDisruptionBudgets
+- [x] Topology spread constraints
+- [x] Metrics Server management
+- [x] Automated diagnostics and PDF/email reporting
+- [ ] Centralized logging and observability
+- [ ] Monitoring dashboards and alerting
+
+---
+
+## Next Phase: Observability
+
+The next major phase is to add an observability layer around the deployed platform.
+
+Planned areas include:
+
+### Centralized Logging
+
+Evaluate and implement an ELK-style logging architecture:
+
+```text
+Application / Kubernetes Logs
+             │
+             ▼
+      Log Collection Layer
+             │
+             ▼
+     Processing / Routing
+             │
+             ▼
+        Elasticsearch
+             │
+             ▼
+           Kibana
+```
+
+The goal is to move from workflow-level diagnostics to searchable, centralized runtime logs across the Kubernetes environment.
+
+### Monitoring
+
+The monitoring phase will focus on infrastructure and workload visibility, including areas such as:
+
+- node health
+- pod health
+- CPU and memory consumption
+- deployment availability
+- application/service health
+- Kubernetes metrics
+- alerting
+- operational dashboards
+
+The exact monitoring stack will be selected and implemented as part of this phase rather than documented here as already complete.
+
+---
+
+## Future Research Direction
+
+A longer-term idea for this project is an **intelligent log-processing layer** capable of understanding heterogeneous application logs before they reach the indexing pipeline.
+
+The proposed direction is to investigate automatic identification of characteristics such as:
+
+- log format
+- application/service source
+- structured vs. unstructured messages
+- programming/runtime ecosystem
+- timestamp and severity conventions
+
+Based on those characteristics, logs could be routed through an appropriate parser or processing pipeline automatically instead of requiring every application to use one manually maintained parsing configuration.
+
+Conceptually:
+
+```text
+Incoming Log
+     │
+     ▼
+Format / Source Detection
+     │
+     ├── JSON ───────────────► JSON Pipeline
+     ├── Nginx ──────────────► Web Access Pipeline
+     ├── Node.js ────────────► Application Pipeline
+     ├── Kubernetes ─────────► Kubernetes Pipeline
+     └── Unknown ────────────► Generic / Learned Parser
+                                      │
+                                      ▼
+                               Normalized Event
+                                      │
+                                      ▼
+                                Elasticsearch
+```
+
+This is a **planned research direction**, not a feature claimed as implemented in the current repository.
+
+---
+
+## Engineering Takeaways
+
+This project goes beyond deploying an application once. The main engineering objectives are **repeatability, controlled access, security gates, traceability and failure visibility**.
+
+Some of the key design decisions include:
+
+- Infrastructure is defined with Terraform instead of manually reproducing AWS resources.
+- CI/CD uses AWS OIDC rather than persistent cloud access keys.
+- Container images are independently built, scanned and versioned.
+- Deployment occurs only after a consolidated CI gate succeeds.
+- ECR tags are immutable, improving image/version traceability.
+- Application workloads do not automatically receive Kubernetes API tokens when they do not need them.
+- Backend network access is constrained through NetworkPolicy.
+- Multiple replicas are combined with disruption budgets and topology spreading instead of treating replica count alone as high availability.
+- CI/CD produces diagnostics even when stages fail, improving troubleshooting.
+- Reporting is treated as part of the pipeline rather than an afterthought.
+- Observability is being developed as a separate engineering phase rather than being presented as complete before implementation.
+
+---
+
+## About EventSync
+
+EventSync is a campus-wide events and activities hub for the German University in Cairo. It brings together students, staff, professors, vendors and the event office to discover, create and manage activities such as workshops, trips, conferences, bazaars, booths and sports events.
+
+The application provides the workload for this repository; **the primary purpose of this repository is the DevOps platform and delivery engineering built around it.**
+
+---
+
+## Author
+
+**Youssef Rezk**
+
+This repository documents the DevOps transformation of EventSync from an application codebase into a containerized, CI/CD-driven, infrastructure-as-code-managed Kubernetes workload on AWS.
 
 ---
 
 ## License
 
-This project is licensed under the MIT License.
-
-This project also uses third-party libraries, including the Stripe Node.js SDK,
-which is licensed under the MIT License. You must include Stripe’s license notice
-if you distribute or modify this project.
-
-Stripe Node.js License:
-https://github.com/stripe/stripe-node/blob/master/LICENSE
-
----
-
-_Last updated: Sprint 2 — please keep this README up‑to‑date as the project evolves._
-
-# EventSync
+Refer to the repository's license information, if provided, for usage terms.
