@@ -679,6 +679,10 @@ jobs:
           check_access create networkpolicies
           check_access patch networkpolicies
 
+          check_access get poddisruptionbudgets
+          check_access create poddisruptionbudgets
+          check_access patch poddisruptionbudgets
+
           echo "Required Kubernetes deployment permissions are available."
 
       - name: Apply workload service accounts
@@ -695,6 +699,14 @@ jobs:
           kubectl apply \
             --namespace "$K8S_NAMESPACE" \
             -f k8s/backend-networkpolicy.yaml
+
+      - name: Apply pod disruption budgets
+        shell: bash
+        run: |
+          kubectl apply \
+            --namespace "$K8S_NAMESPACE" \
+            -f k8s/backend-pdb.yaml \
+            -f k8s/frontend-pdb.yaml
 
       - name: Deploy backend
         shell: bash
