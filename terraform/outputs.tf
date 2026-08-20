@@ -73,3 +73,17 @@ output "github_actions_cd_role_arn" {
   description = "IAM role ARN assumed by GitHub Actions for EventSync CD"
   value       = aws_iam_role.github_actions_cd.arn
 }
+
+# ---------------------------------------------------------
+# Observability
+# ---------------------------------------------------------
+
+output "observability_instance_id" {
+  description = "EC2 instance ID for the EventSync observability host"
+  value       = aws_instance.observability.id
+}
+
+output "observability_private_ip" {
+  description = "Private IP address of the EventSync observability host"
+  value       = aws_instance.observability.private_ip
+}
