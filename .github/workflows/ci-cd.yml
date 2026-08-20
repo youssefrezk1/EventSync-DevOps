@@ -675,6 +675,10 @@ jobs:
           check_access create serviceaccounts
           check_access patch serviceaccounts
 
+          check_access get networkpolicies
+          check_access create networkpolicies
+          check_access patch networkpolicies
+
           echo "Required Kubernetes deployment permissions are available."
 
       - name: Apply workload service accounts
@@ -684,6 +688,13 @@ jobs:
             --namespace "$K8S_NAMESPACE" \
             -f k8s/backend-serviceaccount.yaml \
             -f k8s/frontend-serviceaccount.yaml
+
+      - name: Apply workload network policies
+        shell: bash
+        run: |
+          kubectl apply \
+            --namespace "$K8S_NAMESPACE" \
+            -f k8s/backend-networkpolicy.yaml
 
       - name: Deploy backend
         shell: bash
