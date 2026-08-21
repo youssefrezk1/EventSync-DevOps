@@ -101,6 +101,8 @@ resource "aws_instance" "observability" {
 
   iam_instance_profile = aws_iam_instance_profile.observability.name
 
+  user_data = file("${path.module}/scripts/bootstrap-observability.sh")
+
   root_block_device {
     volume_type           = "gp3"
     volume_size           = 30
