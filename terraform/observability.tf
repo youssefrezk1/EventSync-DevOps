@@ -101,7 +101,11 @@ resource "aws_instance" "observability" {
 
   iam_instance_profile = aws_iam_instance_profile.observability.name
 
-  user_data = file("${path.module}/scripts/bootstrap-observability.sh")
+  user_data = replace(
+    file("${path.module}/scripts/bootstrap-observability.sh"),
+    "__EVENTSYNC_LOGSTASH_PIPELINE_B64__",
+    filebase64("${path.module}/../observability/logstash/pipeline/logstash.conf")
+  )
 
   root_block_device {
     volume_type           = "gp3"

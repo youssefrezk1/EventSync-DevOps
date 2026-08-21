@@ -24,33 +24,7 @@ echo "===== OBSERVABILITY DIRECTORIES ====="
 mkdir -p "${LOGSTASH_PIPELINE_DIR}"
 
 echo "===== LOGSTASH PIPELINE ====="
-cat > "${LOGSTASH_PIPELINE_DIR}/logstash.conf" <<'LOGSTASH'
-input {
-  beats {
-    port => 5044
-  }
-}
-
-filter {
-  mutate {
-    add_field => {
-      "environment" => "dev"
-      "project" => "EventSync"
-    }
-  }
-}
-
-output {
-  elasticsearch {
-    hosts => ["http://eventsync-elasticsearch:9200"]
-    index => "eventsync-logs-%{+YYYY.MM.dd}"
-  }
-
-  stdout {
-    codec => rubydebug
-  }
-}
-LOGSTASH
+echo "__EVENTSYNC_LOGSTASH_PIPELINE_B64__" | base64 -d > "${LOGSTASH_PIPELINE_DIR}/logstash.conf"
 
 echo "===== DOCKER NETWORK ====="
 docker network inspect eventsync-observability >/dev/null 2>&1 || \
