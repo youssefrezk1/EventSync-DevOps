@@ -87,3 +87,8 @@ output "observability_private_ip" {
   description = "Private IP address of the EventSync observability host"
   value       = aws_instance.observability.private_ip
 }
+
+output "logstash_private_dns" {
+  description = "Private DNS name used by Filebeat to reach Logstash"
+  value       = aws_route53_record.logstash.fqdn
+}
