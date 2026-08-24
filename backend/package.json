@@ -31,7 +31,7 @@
     "stripe": "^19.3.0"
   },
   "devDependencies": {
-    "@types/express": "^5.0.3",
+    "@types/express": "^5.0.6",
     "@types/mongoose": "^5.11.96",
     "@types/node": "^24.7.0",
     "jest": "^30.4.2",
