@@ -1,0 +1,11 @@
+{
+  "parsers": [
+    {
+      "id": "payment_failure_v1",
+      "template": "Payment <*> failed user=<*> latency=<*>ms",
+      "regex": "^Payment (.*?) failed user=(.*?) latency=(.*?)ms$",
+      "parameter_count": 3,
+      "validated": true
+    }
+  ]
+}

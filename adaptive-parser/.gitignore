@@ -1,0 +1,13 @@
+# Local Python virtual environment
+.venv/
+
+# Python caches
+__pycache__/
+*.py[cod]
+
+# Local environment/provider credentials
+.env
+.env.*
+
+# Test/runtime logs
+*.log

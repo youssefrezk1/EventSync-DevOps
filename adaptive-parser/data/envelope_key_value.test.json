@@ -1,0 +1,21 @@
+{
+  "parsers": [
+    {
+      "id": "auto_parser_001",
+      "template": "time=<*> level=error service=database msg=\"connection timeout\"",
+      "matcher": {
+        "type": "regex",
+        "config": {
+          "pattern": "^time=(.*?)\\ level=error\\ service=database\\ msg=\"connection\\ timeout\"$"
+        }
+      },
+      "parameter_count": 1,
+      "validated": true,
+      "validation": {
+        "coverage": 1.0,
+        "negative_match_rate": 0.0,
+        "parameter_count_consistent": true
+      }
+    }
+  ]
+}
