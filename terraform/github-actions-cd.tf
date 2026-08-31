@@ -81,10 +81,44 @@ resource "aws_iam_policy" "github_actions_cd" {
 
         Resource = [
           aws_ecr_repository.frontend.arn,
-          aws_ecr_repository.backend.arn
+          aws_ecr_repository.backend.arn,
+          aws_ecr_repository.adaptive_parser.arn
         ]
       },
 
+      {
+        Sid    = "FindObservabilityInstance"
+        Effect = "Allow"
+
+        Action = [
+          "ec2:DescribeInstances"
+        ]
+
+        Resource = "*"
+      },
+      {
+        Sid    = "DeployAdaptiveParserViaSSM"
+        Effect = "Allow"
+
+        Action = [
+          "ssm:SendCommand"
+        ]
+
+        Resource = [
+          aws_instance.observability.arn,
+          "arn:aws:ssm:${var.aws_region}::document/AWS-RunShellScript"
+        ]
+      },
+      {
+        Sid    = "ReadAdaptiveParserCommandResult"
+        Effect = "Allow"
+
+        Action = [
+          "ssm:GetCommandInvocation"
+        ]
+
+        Resource = "*"
+      },
       {
         Sid    = "DescribeEventSyncCluster"
         Effect = "Allow"

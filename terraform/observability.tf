@@ -129,6 +129,45 @@ resource "aws_instance" "observability" {
 
   depends_on = [
     aws_route_table_association.private_a,
-    aws_iam_role_policy_attachment.observability_ssm
+    aws_iam_role_policy_attachment.observability_ssm,
+    aws_iam_role_policy.observability_adaptive_parser_ecr
   ]
+}
+
+# ---------------------------------------------------------
+# Adaptive Parser ECR Pull Access
+# ---------------------------------------------------------
+
+resource "aws_iam_role_policy" "observability_adaptive_parser_ecr" {
+  name = "${local.project_name}-observability-adaptive-parser-ecr"
+  role = aws_iam_role.observability_ssm.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+
+    Statement = [
+      {
+        Sid    = "ECRAuthorization"
+        Effect = "Allow"
+
+        Action = [
+          "ecr:GetAuthorizationToken"
+        ]
+
+        Resource = "*"
+      },
+      {
+        Sid    = "PullAdaptiveParserImage"
+        Effect = "Allow"
+
+        Action = [
+          "ecr:BatchCheckLayerAvailability",
+          "ecr:BatchGetImage",
+          "ecr:GetDownloadUrlForLayer"
+        ]
+
+        Resource = aws_ecr_repository.adaptive_parser.arn
+      }
+    ]
+  })
 }

@@ -2,6 +2,16 @@
 name: EventSync CI/CD
 
 on:
+  push:
+    branches:
+      - main
+      - develop
+
+  pull_request:
+    branches:
+      - main
+      - develop
+
   workflow_dispatch:
     inputs:
       deploy:
@@ -23,6 +33,7 @@ env:
   K8S_NAMESPACE: eventsync
   FRONTEND_REPOSITORY: eventsync-frontend
   BACKEND_REPOSITORY: eventsync-backend
+  ADAPTIVE_PARSER_REPOSITORY: eventsync-adaptive-parser
 
 
 jobs:
@@ -609,11 +620,24 @@ jobs:
             echo "backend_exists=false" >> "$GITHUB_OUTPUT"
           fi
 
+          if aws ecr describe-images \
+            --repository-name "$ADAPTIVE_PARSER_REPOSITORY" \
+            --image-ids imageTag="$TAG" \
+            --region "$AWS_REGION" \
+            >/dev/null 2>&1
+          then
+            echo "adaptive_parser_exists=true" >> "$GITHUB_OUTPUT"
+            echo "Adaptive Parser image already exists; it will be reused."
+          else
+            echo "adaptive_parser_exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Set up Docker Buildx
         if: >-
           ${{
             steps.images.outputs.frontend_exists != 'true' ||
-            steps.images.outputs.backend_exists != 'true'
+            steps.images.outputs.backend_exists != 'true' ||
+            steps.images.outputs.adaptive_parser_exists != 'true'
           }}
         uses: docker/setup-buildx-action@v3
 
@@ -644,6 +668,29 @@ jobs:
             steps.meta.outputs.image_tag }}
           cache-from: type=gha,scope=eventsync-backend
           cache-to: type=gha,mode=max,scope=eventsync-backend
+
+      - name: Build and push adaptive parser
+        if: steps.images.outputs.adaptive_parser_exists != 'true'
+        uses: docker/build-push-action@v6
+        with:
+          context: ./adaptive-parser
+          platforms: linux/amd64
+          push: true
+          tags: >-
+            ${{ steps.ecr-login.outputs.registry }}/${{
+            env.ADAPTIVE_PARSER_REPOSITORY }}:${{
+            steps.meta.outputs.image_tag }}
+          cache-from: type=gha,scope=eventsync-adaptive-parser
+          cache-to: type=gha,mode=max,scope=eventsync-adaptive-parser
+
+      - name: Deploy adaptive parser to observability host
+        shell: bash
+        run: |
+          .github/scripts/deploy-adaptive-parser-via-ssm.sh \
+            "${{ steps.ecr-login.outputs.registry }}" \
+            "$ADAPTIVE_PARSER_REPOSITORY" \
+            "${{ steps.meta.outputs.image_tag }}" \
+            "$AWS_REGION"
 
       - name: Configure kubectl
         run: |

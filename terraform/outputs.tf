@@ -23,6 +23,11 @@ output "backend_ecr_repository_url" {
   value       = aws_ecr_repository.backend.repository_url
 }
 
+output "adaptive_parser_ecr_repository_url" {
+  description = "ECR repository URL for the EventSync adaptive parser"
+  value       = aws_ecr_repository.adaptive_parser.repository_url
+}
+
 output "vpc_id" {
   description = "EventSync VPC ID"
   value       = aws_vpc.main.id

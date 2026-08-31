@@ -29,6 +29,8 @@ class UnknownLogClusterer:
         event skeleton construction
             ↓
         TF-IDF + DBSCAN
+            ↓
+        conservative exact-skeleton cross-signature recovery
 
     Raw strings remain supported for backward compatibility.
 
@@ -88,16 +90,22 @@ class UnknownLogClusterer:
 
         clusters = {}
         next_cluster_id = 0
-        noise_messages = []
+        noise_events = []
 
+        # =====================================================
+        # PHASE 1
+        #
+        # Existing signature-bounded clustering.
+        #
+        # This remains the primary safety boundary.
+        # =====================================================
         for partition_events in partitions.values():
             if (
                 len(partition_events)
                 < self.min_samples
             ):
-                noise_messages.extend(
-                    event.raw_message
-                    for event in partition_events
+                noise_events.extend(
+                    partition_events
                 )
                 continue
 
@@ -125,13 +133,13 @@ class UnknownLogClusterer:
                 labels,
             ):
                 if label == -1:
-                    noise_messages.append(
-                        event.raw_message
+                    noise_events.append(
+                        event
                     )
                     continue
 
                 local_clusters[label].append(
-                    event.raw_message
+                    event
                 )
 
             for local_cluster in (
@@ -143,10 +151,339 @@ class UnknownLogClusterer:
 
                 next_cluster_id += 1
 
-        if noise_messages:
-            clusters[-1] = noise_messages
+        # =====================================================
+        # PHASE 2
+        #
+        # Conservative cross-signature recovery.
+        #
+        # Recovery is allowed only when a candidate combination
+        # produces one exact shared structural skeleton across
+        # every member.
+        #
+        # No fuzzy cross-signature similarity is used here.
+        #
+        # Existing successful clusters are preserved unless a
+        # noise candidate is structurally identical to the entire
+        # cluster under one jointly inferred skeleton.
+        # =====================================================
+        if noise_events:
+            (
+                clusters,
+                noise_events,
+                next_cluster_id,
+            ) = self._recover_cross_signature(
+                clusters=clusters,
+                noise_events=noise_events,
+                next_cluster_id=next_cluster_id,
+            )
 
-        return clusters
+        output = {}
+
+        for cluster_id, cluster_events in (
+            clusters.items()
+        ):
+            output[cluster_id] = [
+                event.raw_message
+                for event in cluster_events
+            ]
+
+        if noise_events:
+            output[-1] = [
+                event.raw_message
+                for event in noise_events
+            ]
+
+        return output
+
+    def _recover_cross_signature(
+        self,
+        clusters,
+        noise_events,
+        next_cluster_id,
+    ):
+        """
+        Recover structurally identical families split by signature.
+
+        Safety rule:
+
+        A noise event or recovered noise family may join an existing
+        cluster only when jointly rebuilding skeletons across the
+        complete candidate set yields exactly one identical skeleton.
+
+        This intentionally avoids fuzzy similarity across signatures.
+        """
+        remaining_noise = list(
+            noise_events
+        )
+
+        changed = True
+
+        while changed and remaining_noise:
+            changed = False
+
+            # -------------------------------------------------
+            # 1. Attempt to attach individual noise events to
+            #    an existing successful cluster.
+            # -------------------------------------------------
+            for noise_event in list(
+                remaining_noise
+            ):
+                matched_cluster_id = None
+
+                for (
+                    cluster_id,
+                    cluster_events,
+                ) in clusters.items():
+
+                    candidate_events = (
+                        list(cluster_events)
+                        + [noise_event]
+                    )
+
+                    if (
+                        self._exact_shared_skeleton(
+                            candidate_events
+                        )
+                        or self._runtime_optional_compatible(
+                            cluster_events,
+                            noise_event,
+                        )
+                    ):
+                        matched_cluster_id = (
+                            cluster_id
+                        )
+                        break
+
+                if matched_cluster_id is not None:
+                    clusters[
+                        matched_cluster_id
+                    ].append(
+                        noise_event
+                    )
+
+                    remaining_noise.remove(
+                        noise_event
+                    )
+
+                    changed = True
+
+            if changed:
+                continue
+
+            # -------------------------------------------------
+            # 2. Attempt to recover a new family solely from
+            #    remaining cross-signature noise.
+            #
+            #    We use groups of events that jointly collapse
+            #    to one exact skeleton.
+            # -------------------------------------------------
+            recovered_group = None
+
+            for seed in remaining_noise:
+                candidate_group = [
+                    seed
+                ]
+
+                for candidate in remaining_noise:
+                    if candidate is seed:
+                        continue
+
+                    proposed = (
+                        candidate_group
+                        + [candidate]
+                    )
+
+                    if self._exact_shared_skeleton(
+                        proposed
+                    ):
+                        candidate_group = (
+                            proposed
+                        )
+
+                if (
+                    len(candidate_group)
+                    >= self.min_samples
+                ):
+                    recovered_group = (
+                        candidate_group
+                    )
+                    break
+
+            if recovered_group is not None:
+                clusters[next_cluster_id] = (
+                    list(recovered_group)
+                )
+
+                next_cluster_id += 1
+
+                for event in recovered_group:
+                    remaining_noise.remove(
+                        event
+                    )
+
+                changed = True
+
+        return (
+            clusters,
+            remaining_noise,
+            next_cluster_id,
+        )
+
+    def _exact_shared_skeleton(
+        self,
+        events,
+    ):
+        if (
+            len(events)
+            < self.min_samples
+        ):
+            return False
+
+        normalized_messages = [
+            self.normalizer.normalize(
+                event.message
+            )
+            for event in events
+        ]
+
+        skeletons = (
+            self.skeleton_builder.build_partition(
+                normalized_messages
+            )
+        )
+
+        return (
+            bool(skeletons)
+            and len(set(skeletons)) == 1
+        )
+
+    def _runtime_optional_compatible(
+        self,
+        cluster_events,
+        candidate_event,
+    ):
+        """
+        Allow one non-runtime candidate token at a position that an
+        established cluster already proves is runtime-bearing.
+
+        Structural variation already learned by EventSkeletonBuilder
+        is preserved. This helper therefore compares the established
+        family skeleton with the jointly inferred candidate skeleton
+        instead of comparing normalized raw messages directly.
+
+        No sentinel vocabulary is hard-coded.
+        """
+        if (
+            len(cluster_events)
+            < self.min_samples
+        ):
+            return False
+
+        cluster_normalized = [
+            self.normalizer.normalize(
+                event.message
+            )
+            for event in cluster_events
+        ]
+
+        established_skeletons = (
+            self.skeleton_builder.build_partition(
+                cluster_normalized
+            )
+        )
+
+        if (
+            not established_skeletons
+            or len(set(established_skeletons)) != 1
+        ):
+            return False
+
+        established_tokens = (
+            established_skeletons[0].split()
+        )
+
+        candidate_normalized = (
+            self.normalizer.normalize(
+                candidate_event.message
+            )
+        )
+
+        joint_normalized = (
+            cluster_normalized
+            + [candidate_normalized]
+        )
+
+        joint_skeletons = (
+            self.skeleton_builder.build_partition(
+                joint_normalized
+            )
+        )
+
+        if not joint_skeletons:
+            return False
+
+        candidate_tokens = (
+            joint_skeletons[-1].split()
+        )
+
+        if (
+            len(candidate_tokens)
+            != len(established_tokens)
+        ):
+            return False
+
+        differing_positions = [
+            position
+            for position, (
+                established_value,
+                candidate_value,
+            ) in enumerate(
+                zip(
+                    established_tokens,
+                    candidate_tokens,
+                )
+            )
+            if (
+                established_value
+                != candidate_value
+            )
+        ]
+
+        if len(differing_positions) != 1:
+            return False
+
+        position = differing_positions[0]
+
+        runtime_markers = (
+            "<NUM>",
+            "<IP>",
+            "<UUID>",
+            "<TIMESTAMP>",
+            "<EMAIL>",
+            "<SECRET>",
+        )
+
+        established_value = (
+            established_tokens[position]
+        )
+
+        candidate_value = (
+            candidate_tokens[position]
+        )
+
+        if not any(
+            marker in established_value
+            for marker in runtime_markers
+        ):
+            return False
+
+        if any(
+            marker in candidate_value
+            for marker in runtime_markers
+        ):
+            return False
+
+        return True
 
     def _cluster_partition(
         self,
